@@ -2,12 +2,20 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSession, COOKIE, COOKIE_SECURE, User } from "@/lib/auth";
-import { avatarUrl, type DiscordUser } from "@/lib/discord";
+import { avatarUrl } from "@/lib/discord";
 
 const TOKEN = "https://discord.com/api/oauth2/token";
 const ME = "https://discord.com/api/v10/users/@me";
 
 type TokenRes = { access_token: string };
+
+/** Cee ce intoarce Discord la /users/@me. */
+type DiscordProfile = {
+  id: string;
+  username: string;
+  global_name?: string | null;
+  avatar?: string | null;
+};
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -49,7 +57,7 @@ export async function GET(req: Request) {
     cache: "no-store",
   });
   if (!meRes.ok) return redirect("/login?eroare=user");
-  const du: DiscordUser = await meRes.json();
+  const du: DiscordProfile = await meRes.json();
 
   // optional: verifica rolul / whitelist
   const user: User = {

@@ -4,11 +4,12 @@
 
 const API = "https://discord.com/api/v10";
 
+/** Campurile vin opțional de la API-ul Discord; le tratăm ca nullable. */
 export type DiscordUser = {
   id: string;
   username: string;
-  global_name: string | null;
-  avatar: string | null;
+  global_name?: string | null;
+  avatar?: string | null;
 };
 
 function headers(token: string) {
@@ -89,7 +90,7 @@ export async function getGuildMember(guildId: string, userId: string) {
   return call<any>("GET", `/guilds/${guildId}/members/${userId}`, process.env.DISCORD_BOT_TOKEN!);
 }
 
-export function avatarUrl(user: DiscordUser) {
+export function avatarUrl(user: { id: string; avatar?: string | null }) {
   return user.avatar
     ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
     : `https://cdn.discordapp.com/embed/avatars/${Number(user.id) >> 22 % 6}.png`;

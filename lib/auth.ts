@@ -14,6 +14,17 @@ export type User = {
   username: string;
   globalName: string;
   avatar: string | null;
+  membru?: {
+    callsign: string;
+    nume: string;
+    grad: string;
+    eticheta: string;
+    numarGrad: number;
+    poateSMULS: boolean;
+    poateRezidentiat: boolean;
+    poateBLS: boolean;
+    poateRadio: boolean;
+  } | null;
 };
 
 function sign(v: string) {
@@ -53,5 +64,11 @@ export async function getUser(): Promise<User | null> {
   if (!s) return null;
   const u = await getJson<any>(K.user(s.id));
   if (!u) return null;
-  return { id: u.id, username: u.username, globalName: u.globalName, avatar: u.avatar };
+  return {
+    id: u.id,
+    username: u.username,
+    globalName: u.globalName,
+    avatar: u.avatar,
+    membru: u.membru ?? null,
+  };
 }

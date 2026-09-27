@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSession, COOKIE, COOKIE_SECURE, User } from "@/lib/auth";
 import { avatarUrl } from "@/lib/discord";
+import { gasesteMembruDupaDiscordId } from "@/lib/sheets";
 
 const TOKEN = "https://discord.com/api/oauth2/token";
 const ME = "https://discord.com/api/v10/users/@me";
@@ -71,11 +72,15 @@ export async function GET(req: Request) {
     if (!meRes.ok) return redirect("/login?eroare=user");
     const du: DiscordProfile = await meRes.json();
 
+    // Verificam in Google Sheets daca utilizatorul exista in departament
+    const membru = await gasesteMembruDupaDiscordId(du.id);
+
     const user: User = {
       id: du.id,
       username: du.username,
-      globalName: du.global_name ?? du.username,
+      globalName: membru ? membru.eticheta : (du.global_name ?? du.username),
       avatar: avatarUrl(du),
+      membru: membru ?? null,
     };
 
     const session = await createSession(user);

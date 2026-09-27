@@ -65,8 +65,8 @@ export async function postMessage(
   content: string,
   components: unknown[] = [],
   token = process.env.DISCORD_BOT_TOKEN!,
-) {
-  return call("POST", `/channels/${channel}/messages`, token, { content, components });
+): Promise<{ id: string }> {
+  return call<{ id: string }>("POST", `/channels/${channel}/messages`, token, { content, components });
 }
 
 export async function editMessage(

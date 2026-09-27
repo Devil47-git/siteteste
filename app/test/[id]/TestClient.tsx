@@ -20,6 +20,23 @@ type Q = {
   total: number;
 };
 
+/** Mapeaza raspunsul serverului in starea intrebarii curente. */
+function toQ(j: {
+  intrebare: string;
+  optiuni: string[];
+  index: number;
+  pozitie: number;
+  total: number;
+}): Q {
+  return {
+    intrebare: j.intrebare,
+    optiuni: j.optiuni,
+    index: j.index,
+    pozitie: j.pozitie,
+    total: j.total,
+  };
+}
+
 export default function TestClient({ attemptId, numeTest, greseliPermise }: Props) {
   const router = useRouter();
   const [q, setQ] = useState<Q | null>(null);
@@ -31,7 +48,16 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<"ok" | "bad" | null>(null);
   const trimisRef = useRef(false);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inceputRef = useRef<number>(Date.now());
+
+  // timerul de flash nu trebuie sa arate dupa ce componenta s-a demontat
+  useEffect(
+    () => () => {
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    },
+    [],
+  );
 
   const a = attemptId;
 
@@ -39,37 +65,45 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
     async (motiv?: string) => {
       if (trimisRef.current) return;
       trimisRef.current = true;
-      const r = await fetch(`/api/test?a=${a}`, { cache: "no-store" });
-      const j = await r.json();
-      if (j.ok && j.finalizat) setFinalizat({ scor: j.scor, greseli: j.greseli, motiv: j.motiv ?? motiv });
+      try {
+        const r = await fetch(`/api/test?a=${a}`, { cache: "no-store" });
+        const j = await r.json();
+        if (j.ok && j.finalizat) setFinalizat({ scor: j.scor, greseli: j.greseli, motiv: j.motiv ?? motiv });
+      } catch {
+        // serverul nu raspunde: aratam tot rezultatul, ca sa nu ramana ecranul blocat
+        setFinalizat({ scor: 0, greseli, motiv: motiv ?? "timp" });
+      }
     },
-    [a],
+    [a, greseli],
   );
 
   // incarcare initiala
   useEffect(() => {
+    let alive = true;
     (async () => {
-      const r = await fetch(`/api/test?a=${a}`, { cache: "no-store" });
-      const j = await r.json();
-      if (!j.ok) {
-        setEroare(j.mesaj || "Nu pot încărca testul.");
-        return;
+      try {
+        const r = await fetch(`/api/test?a=${a}`, { cache: "no-store" });
+        const j = await r.json();
+        if (!alive) return;
+        if (!j.ok) {
+          setEroare(j.mesaj || "Nu pot încărca testul.");
+          return;
+        }
+        if (j.finalizat) {
+          setFinalizat({ scor: j.scor, greseli: j.greseli, motiv: j.motiv });
+          return;
+        }
+        inceputRef.current = Date.now();
+        setQ(toQ(j));
+        setGreseli(j.greseli);
+        setRamase(j.ramase);
+      } catch {
+        if (alive) setEroare("Nu pot încărca testul.");
       }
-      if (j.finalizat) {
-        setFinalizat({ scor: j.scor, greseli: j.greseli, motiv: j.motiv });
-        return;
-      }
-      inceputRef.current = Date.now();
-      setQ({
-        intrebare: j.intrebare,
-        optiuni: j.optiuni,
-        index: j.index,
-        pozitie: j.pozitie,
-        total: j.total,
-      });
-      setGreseli(j.greseli);
-      setRamase(j.ramase);
     })();
+    return () => {
+      alive = false;
+    };
   }, [a]);
 
   // timer: bazat pe ceasul serverului la fiecare intrebare
@@ -107,18 +141,13 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
     setGreseli(j.greseli);
     setAles(null);
     setFlash(j.corect ? "ok" : "bad");
-    setTimeout(() => setFlash(null), 250);
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = setTimeout(() => setFlash(null), 250);
     // reincarce intrebarea urmatoare
     const s = await fetch(`/api/test?a=${a}`, { cache: "no-store" });
     const k = await s.json();
     if (k.ok && !k.finalizat) {
-      setQ({
-        intrebare: k.intrebare,
-        optiuni: k.optiuni,
-        index: k.index,
-        pozitie: k.pozitie,
-        total: k.total,
-      });
+      setQ(toQ(k));
       setRamase(k.ramase);
     } else if (k.ok) {
       setFinalizat({ scor: k.scor, greseli: k.greseli, motiv: k.motiv });

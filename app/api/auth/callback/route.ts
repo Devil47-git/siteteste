@@ -7,6 +7,14 @@ import { avatarUrl } from "@/lib/discord";
 const TOKEN = "https://discord.com/api/oauth2/token";
 const ME = "https://discord.com/api/v10/users/@me";
 
+type TokenRes = { access_token: string };
+type DiscordUser = {
+  id: string;
+  username: string;
+  global_name?: string | null;
+  avatar?: string | null;
+};
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const state = url.searchParams.get("state");
@@ -40,14 +48,14 @@ export async function GET(req: Request) {
   });
 
   if (!tokRes.ok) return redirect("/login?eroare=token");
-  const tok: any = await tokRes.json();
+  const tok: TokenRes = await tokRes.json();
 
   const meRes = await fetch(ME, {
     headers: { Authorization: `Bearer ${tok.access_token}` },
     cache: "no-store",
   });
   if (!meRes.ok) return redirect("/login?eroare=user");
-  const du: any = await meRes.json();
+  const du: DiscordUser = await meRes.json();
 
   // optional: verifica rolul / whitelist
   const user: User = {

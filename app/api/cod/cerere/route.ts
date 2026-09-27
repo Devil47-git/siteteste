@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { getTest, COD_INTERVAL_SECUNDE } from "@/lib/config";
 import { generateCode, hashCode, COD_TTL_SEC } from "@/lib/cod";
-import { getJson, setJson, K } from "@/lib/store";
+import { getJson, setJson, store, K } from "@/lib/store";
 import { postMessage, button, container, webhook } from "@/lib/discord";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +41,15 @@ export async function POST(req: Request) {
   await setJson(K.codDeUser(`${user.id}:${t.id}`), { hash }, COD_TTL_SEC);
 
   // anuntam canalul HR
-  const canal = process.env.DISCORD_HR_CHANNEL_ID!;
+  const canal = process.env.DISCORD_HR_CHANNEL_ID;
+  if (!canal) {
+    await store().del(K.cod(hash));
+    await store().del(K.codDeUser(`${user.id}:${t.id}`));
+    return NextResponse.json(
+      { ok: false, mesaj: "Nu pot contacta canalul HR. Anunta un admin." },
+      { status: 502 },
+    );
+  }
   const mesaj =
     `**Cerere de cod — ${t.nume}**\n` +
     `Candidat: <@${user.id}> (\`${user.id}\`)\n` +
@@ -59,7 +67,7 @@ export async function POST(req: Request) {
   // Butoanele NU functioneaza pe mesaje trimise prin webhook (interactiunile
   // nu ajung la Interactions Endpoint). De aceea preferam mesajul prin bot.
   try {
-    const msg: any = await postMessage(canal, mesaj, butoane);
+    const msg = await postMessage(canal, mesaj, butoane);
     await setJson(`hr:${hash}`, { channel: canal, message: msg.id }, COD_TTL_SEC);
     trimis = true;
   } catch (e) {
@@ -67,11 +75,18 @@ export async function POST(req: Request) {
   }
 
   if (!trimis && url) {
-    await webhook(url, { content: mesaj }).catch((e) => console.error("webhook failed", e));
-    trimis = true;
+    trimis = await webhook(url, { content: mesaj })
+      .then(() => true)
+      .catch((e) => {
+        console.error("webhook failed", e);
+        return false;
+      });
   }
 
   if (!trimis) {
+    // cererea a esuat: curatam codul, ca un retry sa nu mosteneasca un cod orfan
+    await store().del(K.cod(hash));
+    await store().del(K.codDeUser(`${user.id}:${t.id}`));
     return NextResponse.json(
       { ok: false, mesaj: "Nu pot contacta canalul HR. Anunta un admin." },
       { status: 502 },

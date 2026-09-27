@@ -45,7 +45,7 @@ function redisStore(): Store | null {
       cache: "no-store",
     });
     if (!res.ok) throw new Error(`Redis error ${res.status}`);
-    const json: any = await res.json();
+    const json = (await res.json()) as { error?: string; result?: string | number | null };
     if (json.error) throw new Error(`Redis: ${json.error}`);
     return json.result;
   };

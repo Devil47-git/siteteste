@@ -30,8 +30,8 @@ const memoryStore: Store = {
 };
 
 function redisStore(): Store | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = (process.env.UPSTASH_REDIS_REST_URL ?? "").trim().replace(/\/+$/, "");
+  const token = (process.env.UPSTASH_REDIS_REST_TOKEN ?? "").trim();
   if (!url || !token) return null;
 
   const cmd = async (args: (string | number)[]) => {
@@ -44,7 +44,11 @@ function redisStore(): Store | null {
       body: JSON.stringify(args),
       cache: "no-store",
     });
-    if (!res.ok) throw new Error(`Redis error ${res.status}`);
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error(`[Redis Error] HTTP ${res.status}: ${errText}`);
+      throw new Error(`Redis error ${res.status}`);
+    }
     const json = (await res.json()) as { error?: string; result?: string | number | null };
     if (json.error) throw new Error(`Redis: ${json.error}`);
     return json.result;

@@ -2,18 +2,12 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSession, COOKIE, COOKIE_SECURE, User } from "@/lib/auth";
-import { avatarUrl } from "@/lib/discord";
+import { avatarUrl, type DiscordUser } from "@/lib/discord";
 
 const TOKEN = "https://discord.com/api/oauth2/token";
 const ME = "https://discord.com/api/v10/users/@me";
 
 type TokenRes = { access_token: string };
-type DiscordUser = {
-  id: string;
-  username: string;
-  global_name?: string | null;
-  avatar?: string | null;
-};
 
 export async function GET(req: Request) {
   const url = new URL(req.url);

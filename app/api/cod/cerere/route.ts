@@ -32,19 +32,24 @@ export async function POST(req: Request) {
   const cod = generateCode();
   const hash = hashCode(cod);
   const exp = Date.now() + COD_TTL_SEC * 1000;
+  const codKey = K.cod(hash);
+  const codUserKey = K.codDeUser(`${user.id}:${t.id}`);
 
-  await setJson(
-    K.cod(hash),
+  const curata = async () => {
+    await store().del(codKey);
+    await store().del(codUserKey);
+  };
+
+  await setJson(codKey,
     { u: user.id, t: t.id, i: requestId, exp, cod, folosit: false, livrat: false },
     COD_TTL_SEC,
   );
-  await setJson(K.codDeUser(`${user.id}:${t.id}`), { hash }, COD_TTL_SEC);
+  await setJson(codUserKey, { hash }, COD_TTL_SEC);
 
   // anuntam canalul HR
   const canal = process.env.DISCORD_HR_CHANNEL_ID;
   if (!canal) {
-    await store().del(K.cod(hash));
-    await store().del(K.codDeUser(`${user.id}:${t.id}`));
+    await curata();
     return NextResponse.json(
       { ok: false, mesaj: "Nu pot contacta canalul HR. Anunta un admin." },
       { status: 502 },
@@ -85,8 +90,9 @@ export async function POST(req: Request) {
 
   if (!trimis) {
     // cererea a esuat: curatam codul, ca un retry sa nu mosteneasca un cod orfan
-    await store().del(K.cod(hash));
-    await store().del(K.codDeUser(`${user.id}:${t.id}`));
+    await curata();
+    // eliberam si intervalul, ca utilizatorul sa poata reincearca imediat
+    await store().del(intervalKey);
     return NextResponse.json(
       { ok: false, mesaj: "Nu pot contacta canalul HR. Anunta un admin." },
       { status: 502 },

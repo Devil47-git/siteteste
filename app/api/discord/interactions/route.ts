@@ -42,12 +42,14 @@ export async function POST(req: Request) {
   if (!rec) {
     return ephemeral("Cererea a expirat.");
   }
-  const t = getTest(rec.t)!;
+  const t = getTest(rec.t);
+  if (!t) return ephemeral("Testul nu mai există în configurație.");
   const hr = await getJson<any>(`hr:${hash}`);
 
   // doar membrii cu rolul configurat pot apasa butoanele
   const id = p.member?.user.id ?? p.user?.id;
-  const permis = await areRolHR(id!);
+  if (!id) return ephemeral("Nu pot identifica utilizatorul.");
+  const permis = await areRolHR(id);
   if (!permis) return ephemeral("Nu ai voie să folosești acest buton.");
 
   if (actiune === "trimite") {

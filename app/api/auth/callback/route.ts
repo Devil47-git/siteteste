@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createSession, COOKIE, User } from "@/lib/auth";
+import { createSession, COOKIE, COOKIE_SECURE, User } from "@/lib/auth";
 import { avatarUrl } from "@/lib/discord";
 
 const TOKEN = "https://discord.com/api/oauth2/token";
@@ -70,7 +70,7 @@ export async function GET(req: Request) {
   res.cookies.set(COOKIE, session, {
     httpOnly: true,
     sameSite: "lax",
-    secure: true,
+    secure: COOKIE_SECURE,
     path: "/",
     maxAge: 7 * 86400,
   });

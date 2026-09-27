@@ -6,6 +6,9 @@ import { SESIUNE_ZILE } from "./config";
 const SECRET = process.env.SESSION_SECRET ?? "SCHIMBA-SESSION-SECRET-IMPORTANT";
 export const COOKIE = "st_session";
 
+/** `secure: true` ar bloca testarea locala pe http://localhost. */
+export const COOKIE_SECURE = process.env.NODE_ENV === "production" && !!process.env.APP_URL?.startsWith("https://");
+
 export type User = {
   id: string;
   username: string;

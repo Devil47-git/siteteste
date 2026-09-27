@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 /** Marcheaza tentativa ca finalizata si trimite raportul pe Discord (o singura data). */
 async function finalizeaza(a: any, motiv: string, t: any) {
+  if (!t) return a;
   if (!a.finalizat) {
     a.finalizat = true;
     a.motiv = motiv;
@@ -43,7 +44,10 @@ export async function GET(req: Request) {
   const a = await load(url.searchParams.get("a"), user.id);
   if (!a) return NextResponse.json({ ok: false, mesaj: "Sesiune de test inexistentă." }, { status: 404 });
 
-  const t = getTest(a.testId)!;
+  const t = getTest(a.testId);
+  if (!t) {
+    return NextResponse.json({ ok: false, mesaj: "Test inexistent." }, { status: 400 });
+  }
   const ordine = ordineIntrebari(a.testId, a.id);
   const total = intrebariPentru(a.testId).length;
 
@@ -86,7 +90,10 @@ export async function POST(req: Request) {
   if (!a) return NextResponse.json({ ok: false, mesaj: "Sesiune de test inexistentă." }, { status: 404 });
   if (a.finalizat) return NextResponse.json({ ok: false, mesaj: "Test deja finalizat." }, { status: 400 });
 
-  const t = getTest(a.testId)!;
+  const t = getTest(a.testId);
+  if (!t) {
+    return NextResponse.json({ ok: false, mesaj: "Test inexistent." }, { status: 400 });
+  }
   const ordine = ordineIntrebari(a.testId, a.id);
   const total = intrebariPentru(a.testId).length;
 

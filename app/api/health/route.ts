@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { STORE_ESTE_REDIS } from "@/lib/store";
-import { discordAuthorizeUrl } from "@/lib/discord-url";
 import { TESTS } from "@/lib/config";
 import { intrebariPentru, intrebariProbleme } from "@/lib/intrebari";
 
@@ -42,6 +41,6 @@ export async function GET() {
     store: STORE_ESTE_REDIS ? "upstash" : "MEMORIE (dev)",
     autentificat: Boolean(user),
     user,
-    discord: Boolean(discordAuthorizeUrl()),
+    discord: Boolean(process.env.DISCORD_CLIENT_ID),
   });
 }

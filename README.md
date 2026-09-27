@@ -109,13 +109,18 @@ Editează fișierele din `intrebari/`:
 }
 ```
 
-Indexul răspunsului corect se calculează automat din `raspunsCorect`
-(ignorând diacriticele), deci nu edita el manual.
+Indexul răspunsului corect se calculează automat din `raspunsCorect` cu o
+comparție exactă (identic cu unul dintre `optiuni`), deci nu îl edita manual.
 
 Timpul și numărul de greșeli se schimbă în `lib/config.ts`.
 
 Verificare: `GET /api/health` → câmpul `bancuri` arată câte întrebări are fiecare
 test și dacă vreuna are `raspunsCorect` care nu apare în `optiuni` (lista `probleme`).
+
+Poți verifica băncile și fără server:
+```bash
+npm run verifica
+```
 
 ## Local
 
@@ -151,4 +156,8 @@ lib/
   discord.ts  client REST Discord
   intrebari.ts shuffle determinist + verificare răspuns
   semnatura.ts verificare Ed25519 (interactions)
+types/
+  tweetnacl.d.ts   tipuri locale (pachetul nu are @types pe npm)
+test/
+  verifica.mjs     verifică băncile de întrebări
 ```

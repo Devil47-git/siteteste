@@ -69,20 +69,23 @@ export async function POST(req: Request) {
   const url = process.env.DISCORD_WEBHOOK_URL;
 
   let trimis = false;
+  let detaliiEroare = "";
   // Butoanele NU functioneaza pe mesaje trimise prin webhook (interactiunile
   // nu ajung la Interactions Endpoint). De aceea preferam mesajul prin bot.
   try {
     const msg = await postMessage(canal, mesaj, butoane);
     await setJson(`hr:${hash}`, { channel: canal, message: msg.id }, COD_TTL_SEC);
     trimis = true;
-  } catch (e) {
+  } catch (e: any) {
+    detaliiEroare = e?.message || String(e);
     console.error("bot post failed, incerc webhook", e);
   }
 
   if (!trimis && url) {
     trimis = await webhook(url, { content: mesaj })
       .then(() => true)
-      .catch((e) => {
+      .catch((e: any) => {
+        detaliiEroare += ` | webhook: ${e?.message || e}`;
         console.error("webhook failed", e);
         return false;
       });
@@ -94,7 +97,10 @@ export async function POST(req: Request) {
     // eliberam si intervalul, ca utilizatorul sa poata reincearca imediat
     await store().del(intervalKey);
     return NextResponse.json(
-      { ok: false, mesaj: "Nu pot contacta canalul HR. Anunta un admin." },
+      {
+        ok: false,
+        mesaj: `Nu pot contacta canalul HR. Verifica botul/permisiunile. (${detaliiEroare.slice(0, 80)})`,
+      },
       { status: 502 },
     );
   }

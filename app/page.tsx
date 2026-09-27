@@ -61,10 +61,6 @@ export default async function Home() {
             <div className="test-row" key={t.id}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{t.nume}</div>
-                <div className="muted" style={{ marginTop: 4 }}>
-                  {intrebariPentru(t.id).length} întrebări · {Math.floor(t.timpSecunde / 60)} min · max{" "}
-                  {t.greseliPermise} greșeli
-                </div>
               </div>
               {s.stare === "in_curs" ? (
                 <Link className="btn" href={`/test/${t.id}?a=${s.attemptId}`}>Continuă</Link>

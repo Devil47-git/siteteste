@@ -49,9 +49,11 @@ export default function CodForm({ test }: { test: TestConfig }) {
 
       <div className="card" style={{ marginTop: 16 }}>
         <h1>{test.nume}</h1>
-        <p className="muted" style={{ marginTop: 0 }}>
-          {test.descriere} · {Math.floor(test.timpSecunde / 60)} min · maxim {test.greseliPermise} greșeli
-        </p>
+        {test.id === "smuls" && (
+          <p className="muted" style={{ marginTop: 0 }}>
+            {test.descriere}
+          </p>
+        )}
 
         <h2 style={{ marginTop: 24 }}>1. Solicită codul</h2>
         <p className="muted">

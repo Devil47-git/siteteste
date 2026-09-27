@@ -7,20 +7,29 @@ export const dynamic = "force-dynamic";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ eroare?: string }>;
+  searchParams: Promise<{ eroare?: string; detalii?: string }>;
 }) {
-  const { eroare } = await searchParams;
+  const { eroare, detalii } = await searchParams;
   const user = await getUser();
 
   return (
     <main className="wrap" style={{ maxWidth: 460, paddingTop: 80 }}>
       <div className="card" style={{ textAlign: "center" }}>
-        <h1>Platformă teste</h1>
+        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 54, height: 54, borderRadius: 12, background: "rgba(224, 49, 49, 0.12)", border: "1px solid rgba(224, 49, 49, 0.3)", color: "#ff4d4f", marginBottom: 14 }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 10.5h-5.5V5a1.5 1.5 0 0 0-3 0v5.5H5a1.5 1.5 0 0 0 0 3h5.5V19a1.5 1.5 0 0 0 3 0v-5.5H19a1.5 1.5 0 0 0 0-3Z"/>
+          </svg>
+        </div>
+        <h1>Site teste departamentul medical los santos</h1>
         <p className="muted" style={{ marginTop: 0 }}>
           Accesul este disponibil exclusiv prin contul Discord.
         </p>
 
-        {eroare && <div className="alert err">Autentificarea a eșuat. Încearcă din nou.</div>}
+        {eroare && (
+          <div className="alert err">
+            Autentificarea a eșuat. {detalii ? `(${detalii})` : "Încearcă din nou."}
+          </div>
+        )}
 
         {user ? (
           <>

@@ -49,8 +49,13 @@ export async function GET(req: Request) {
     cache: "no-store",
   });
 
-  if (!tokRes.ok) return redirect("/login?eroare=token");
-  const tok: TokenRes = await tokRes.json();
+  const resBody = await tokRes.text();
+  if (!tokRes.ok) {
+    // Log detaliat în consolă/Vercel logs
+    console.error(`[OAuth Token Error] Discord returned status ${tokRes.status}: ${resBody}`);
+    return redirect(`/login?eroare=token&detalii=${encodeURIComponent(resBody.slice(0, 100))}`);
+  }
+  const tok: TokenRes = JSON.parse(resBody);
 
   const meRes = await fetch(ME, {
     headers: { Authorization: `Bearer ${tok.access_token}` },

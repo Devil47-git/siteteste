@@ -25,12 +25,21 @@ export default async function Home() {
 
   return (
     <main className="wrap">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {user.avatar && <img className="avatar" src={user.avatar} alt="" />}
+      <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, padding: "16px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {user.avatar ? (
+            <img className="avatar" src={user.avatar} alt="" />
+          ) : (
+            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
+              {user.username.slice(0, 1).toUpperCase()}
+            </div>
+          )}
           <div>
-            <div style={{ fontWeight: 700 }}>{user.globalName || user.username}</div>
-            <div className="muted">Autentificat cu Discord</div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>{user.globalName || user.username}</div>
+            <div className="muted" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ok)", display: "inline-block" }}></span>
+              Departamentul Medical Los Santos
+            </div>
           </div>
         </div>
         <form action="/api/auth/logout" method="post">
@@ -38,19 +47,21 @@ export default async function Home() {
         </form>
       </div>
 
-      <h1>Teste disponibile</h1>
-      <p className="muted" style={{ marginTop: 0 }}>
-        Pentru a începe un test trebuie să soliciți un cod. Un membru HR vă va trimite codul în privat pe Discord.
-      </p>
+      <div style={{ marginBottom: 20 }}>
+        <h1>Teste departament medical</h1>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Pentru a începe un test trebuie să soliciți un cod. Un membru HR vă va trimite codul în privat pe Discord.
+        </p>
+      </div>
 
-      <div className="grid two" style={{ marginTop: 20 }}>
+      <div className="grid two">
         {TESTS.map((t) => {
           const s = status.find((x) => x.id === t.id)!;
           return (
             <div className="test-row" key={t.id}>
               <div>
-                <div style={{ fontWeight: 700 }}>{t.nume}</div>
-                <div className="muted">
+                <div style={{ fontWeight: 700, fontSize: 16 }}>{t.nume}</div>
+                <div className="muted" style={{ marginTop: 4 }}>
                   {intrebariPentru(t.id).length} întrebări · {Math.floor(t.timpSecunde / 60)} min · max{" "}
                   {t.greseliPermise} greșeli
                 </div>
@@ -58,9 +69,9 @@ export default async function Home() {
               {s.stare === "in_curs" ? (
                 <Link className="btn" href={`/test/${t.id}?a=${s.attemptId}`}>Continuă</Link>
               ) : s.stare === "gata" ? (
-                <span className="muted">Finalizat</span>
+                <span className="muted" style={{ fontWeight: 600 }}>Finalizat</span>
               ) : (
-                <Link className="btn ghost" href={`/cod/${t.id}`}>Solicită cod</Link>
+                <Link className="btn medical" href={`/cod/${t.id}`}>Solicită cod</Link>
               )}
             </div>
           );

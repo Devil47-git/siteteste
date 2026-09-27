@@ -31,6 +31,7 @@ export async function GET(req: Request) {
   const code = url.searchParams.get("code");
   if (!code) return redirect("/login?eroare=callback");
 
+  const base = (process.env.APP_URL ?? "").trim().replace(/\/+$/, "");
   const basic = Buffer.from(
     `${process.env.DISCORD_CLIENT_ID}:${process.env.DISCORD_CLIENT_SECRET}`,
   ).toString("base64");
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code,
-      redirect_uri: `${process.env.APP_URL}/api/auth/callback`,
+      redirect_uri: `${base}/api/auth/callback`,
     }),
     cache: "no-store",
   });

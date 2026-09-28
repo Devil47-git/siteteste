@@ -131,8 +131,8 @@ export default async function Home() {
                 )}
                 {s.cdMs > 0 && s.stare !== "in_curs" && (
                   <div className="cd-info" title="Informație din Google Sheets — nu te împiedică să susții testul.">
-                    ⏳ Cooldown (din Docs, până pe {new Date(Date.now() + s.cdMs).toLocaleDateString("ro-RO")})
-                    — poți da testul doar daca acesta ti-a expirat sau l-ai plătit.
+                    ⏳ Cooldown (până pe {new Date(Date.now() + s.cdMs).toLocaleDateString("ro-RO")})
+                    — poți da testul, doar daca CD acesta ti-a expirat sau l-ai plătit.
                   </div>
                 )}
               </div>

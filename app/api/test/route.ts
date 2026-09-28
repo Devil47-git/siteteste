@@ -85,7 +85,7 @@ export async function POST(req: Request) {
   const user = await getUser();
   if (!user) return NextResponse.json({ ok: false, mesaj: "Neautentificat." }, { status: 401 });
 
-  const body = (await req.json().catch(() => ({}))) as { a?: string; varianta?: number };
+  const body = (await req.json().catch(() => ({}))) as { a?: string; varianta?: number; anticheat?: boolean };
   const a = await load(body.a ?? null, user.id);
   if (!a) return NextResponse.json({ ok: false, mesaj: "Sesiune de test inexistentă." }, { status: 404 });
   if (a.finalizat) return NextResponse.json({ ok: false, mesaj: "Test deja finalizat." }, { status: 400 });
@@ -93,6 +93,19 @@ export async function POST(req: Request) {
   const t = getTest(a.testId);
   if (!t) {
     return NextResponse.json({ ok: false, mesaj: "Test inexistent." }, { status: 400 });
+  }
+
+  // ANTI-CHEAT TRIGGER: Daca a parasit tab-ul / a dat alt-tab
+  if (body.anticheat) {
+    a.scor = 0;
+    await finalizeaza(a, "anticheat", t);
+    return NextResponse.json({
+      ok: true,
+      terminat: true,
+      scor: 0,
+      greseli: a.greseli,
+      motiv: "anticheat",
+    });
   }
   const ordine = ordineIntrebari(a.testId, a.id);
   const total = intrebariPentru(a.testId).length;

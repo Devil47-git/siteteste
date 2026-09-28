@@ -4,6 +4,7 @@ import { getUser } from "@/lib/auth";
 import { TESTS } from "@/lib/config";
 import { getJson, K } from "@/lib/store";
 import { gasesteMembruDupaDiscordId, areAccesLaTest } from "@/lib/sheets";
+import Regulament from "./Regulament";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,8 @@ export default async function Home() {
     }),
   );
 
-  const numeAfisat = membru ? membru.eticheta : user.globalName || user.username;
+  const numeAfisat = membru ? membru.nume : user.globalName || user.username;
+  const esteConducere = membru ? membru.esteConducere : false;
 
   return (
     <main className="wrap">
@@ -38,7 +40,7 @@ export default async function Home() {
               <img className="avatar" src={user.avatar} alt="" />
             ) : (
               <div className="avatar-placeholder">
-                {(membru?.nume || user.username).slice(0, 1).toUpperCase()}
+                {numeAfisat.slice(0, 1).toUpperCase()}
               </div>
             )}
             <span className="status-indicator"></span>
@@ -46,7 +48,9 @@ export default async function Home() {
           <div>
             <div className="profile-name">{numeAfisat}</div>
             <div className="profile-badge">
-              <span className="badge-tag">MEMBER</span>
+              <span className={`badge-tag ${esteConducere ? "conducere" : ""}`}>
+                {esteConducere ? "CONDUCERE" : "MEMBRU"}
+              </span>
               {membru ? (
                 <span>Callsign: <strong>[M-{membru.callsign}]</strong> • Grad: <strong>{membru.grad}</strong></span>
               ) : (
@@ -107,6 +111,9 @@ export default async function Home() {
           );
         })}
       </div>
+
+      {/* Regulament obligatoriu */}
+      <Regulament />
     </main>
   );
 }

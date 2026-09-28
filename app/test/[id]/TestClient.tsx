@@ -120,6 +120,53 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, finalizat]);
 
+  // ANTI-CHEAT: Daca utilizatorul da Alt+Tab sau paraseste fereastra de test
+  useEffect(() => {
+    if (!q || finalizat) return;
+
+    const triggerAntiCheat = async () => {
+      if (trimisRef.current) return;
+      trimisRef.current = true;
+      try {
+        const r = await fetch("/api/test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ a, anticheat: true }),
+        });
+        const j = await r.json();
+        setFinalizat({
+          scor: 0,
+          greseli: j.greseli ?? greseli,
+          motiv: "anticheat",
+        });
+      } catch {
+        setFinalizat({
+          scor: 0,
+          greseli,
+          motiv: "anticheat",
+        });
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        triggerAntiCheat();
+      }
+    };
+
+    const handleBlur = () => {
+      triggerAntiCheat();
+    };
+
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [q, finalizat, a, greseli]);
+
   async function confirma() {
     if (ales === null || busy || trimisRef.current) return;
     setBusy(true);
@@ -181,6 +228,7 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
             {finalizat.scor} / {q?.total ?? "—"}
           </p>
           <p className="muted">
+            {finalizat.motiv === "anticheat" && "Test picat automat: ai părăsit fereastra / ai dat Alt+Tab."}
             {finalizat.motiv === "timp" && "Timpul a expirat."}
             {finalizat.motiv === "greseli" && `Ai ajuns la a ${maxGreseli}-a greșeală.`}
             {(!finalizat.motiv || finalizat.motiv === "final") && "Ai răspuns la toate întrebările."}

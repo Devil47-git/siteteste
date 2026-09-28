@@ -4,6 +4,7 @@ export type MembruMedical = {
   grad: string;
   eticheta: string; // [M-CALLSIGN] Nume, Grad
   numarGrad: number; // ex: 601 -> 600, 402 -> 400 etc.
+  esteConducere: boolean;
   poateSMULS: boolean;
   poateRezidentiat: boolean;
   poateBLS: boolean;
@@ -101,6 +102,14 @@ export async function preiaMembriDinSheet(): Promise<Map<string, MembruMedical>>
         poateRezidentiat = true;
       }
 
+      // Conducere: Medic Chirurg, Medic Inspector, Director Adjunct, Director General
+      const gradUpper = grad.toUpperCase();
+      const esteConducere =
+        gradUpper.includes("CHIRURG") ||
+        gradUpper.includes("INSPECTOR") ||
+        gradUpper.includes("DIRECTOR") ||
+        callsignNum < 100;
+
       const eticheta = `[M-${callsign}] ${nume}, ${grad}`;
 
       mapa.set(discordId, {
@@ -109,6 +118,7 @@ export async function preiaMembriDinSheet(): Promise<Map<string, MembruMedical>>
         grad,
         eticheta,
         numarGrad: callsignNum,
+        esteConducere,
         poateSMULS,
         poateRezidentiat,
         poateBLS,

@@ -87,40 +87,39 @@ export async function POST(req: Request) {
   let trimis = false;
   let detaliiEroare = "";
 
-  // 1. Incercam trimiterea cu butoane prin Bot daca botul e configurat
-  if (canal && botToken) {
-    const butoane = container([
-      button(`cod:trimite:${hash}`, "Trimite codul în privat", 2),
-      button(`cod:refuza:${hash}`, "Refuză", 4),
-    ]);
-    try {
-      const msg = await postMessage(canal, mesajBot, butoane);
-      await setJson(`hr:${hash}`, { channel: canal, message: msg.id }, COD_TTL_SEC);
-      trimis = true;
-    } catch (e: any) {
-      detaliiEroare = e?.message || String(e);
-      console.warn("[Cerere Cod] Bot message failed, falling back to Webhook:", e?.message);
-    }
-  }
+  // Trimitem prin Webhook catre HR / Conducere
+  const roleIdHR = process.env.DISCORD_HR_ROLE_ID || "825071956101169202";
 
-  // 2. Daca botul nu a reusit sau nu e configurat, trimitem prin Webhook direct cu codul
-  if (!trimis && webhookUrl) {
-    // Cand se trimite pe Webhook (unde butoanele Discord nu pot functiona),
-    // trimitem un embed elegant si activam codul ca validabil pe site
+  if (webhookUrl) {
     const webhookPayload = {
-      content: `🔔 **Cerere Cod Test — Departamentul Medical**`,
+      content: `<@&${roleIdHR}>`,
       embeds: [
         {
-          title: `Cerere: ${t.nume}`,
-          color: 0x0f62fe,
+          title: `📝 Cerere nouă de test`,
+          color: 0x00d2ff,
           fields: [
-            { name: "Candidat", value: `${numeAfisat}\n<@${user.id}> (\`${user.id}\`)`, inline: false },
-            { name: "Callsign & Grad", value: `[M-${membru.callsign}] — ${membru.grad}`, inline: true },
-            { name: "Test Solicitat", value: `**${t.nume}**`, inline: true },
-            { name: "Cod Generat", value: `\`\`\`${cod}\`\`\``, inline: false },
-            { name: "Instrucțiuni HR", value: "Puteți trimite codul de mai sus candidatului în privat.", inline: false },
+            {
+              name: "Utilizator",
+              value: `<@${user.id}>\n\`${user.id}\``,
+              inline: true,
+            },
+            {
+              name: "Test",
+              value: `**${t.nume}**`,
+              inline: true,
+            },
+            {
+              name: "Callsign & Grad",
+              value: `**[M-${membru.callsign}]** • ${membru.grad}`,
+              inline: false,
+            },
+            {
+              name: "Cod generat",
+              value: `\`\`\`${cod}\`\`\``,
+              inline: false,
+            },
           ],
-          footer: { text: "Departamentul Medical Los Santos • Sistem Automat" },
+          footer: { text: "Departamentul Medical FPlayT" },
           timestamp: new Date().toISOString(),
         },
       ],
@@ -128,7 +127,6 @@ export async function POST(req: Request) {
 
     try {
       await webhook(webhookUrl, webhookPayload);
-      // Daca a fost trimis prin webhook, permitem candidatului sa foloseasca codul primit
       await setJson(
         codKey,
         { u: user.id, t: t.id, i: requestId, exp, cod, folosit: false, livrat: true },
@@ -136,7 +134,7 @@ export async function POST(req: Request) {
       );
       trimis = true;
     } catch (e: any) {
-      detaliiEroare += ` | webhook: ${e?.message || e}`;
+      detaliiEroare = `webhook: ${e?.message || e}`;
       console.error("[Cerere Cod] Webhook failed:", e);
     }
   }

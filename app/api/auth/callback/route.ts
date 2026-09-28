@@ -78,7 +78,7 @@ export async function GET(req: Request) {
     const user: User = {
       id: du.id,
       username: du.username,
-      globalName: membru ? membru.eticheta : (du.global_name ?? du.username),
+      globalName: membru ? membru.nume : (du.global_name ?? du.username),
       avatar: avatarUrl(du),
       membru: membru ?? null,
     };

@@ -140,6 +140,12 @@ a:hover { color: #fff; }
   letter-spacing: 1px;
 }
 
+.badge-tag.conducere {
+  background: rgba(255, 42, 75, 0.15);
+  border-color: rgba(255, 42, 75, 0.4);
+  color: #ff4765;
+}
+
 .section-subtitle {
   font-size: 11px;
   letter-spacing: 2px;

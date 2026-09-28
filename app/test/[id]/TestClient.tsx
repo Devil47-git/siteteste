@@ -43,7 +43,7 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
   const [ales, setAles] = useState<number | null>(null);
   const [greseli, setGreseli] = useState(0);
   const [ramase, setRamase] = useState<number | null>(null);
-  const [finalizat, setFinalizat] = useState<null | { scor: number; greseli: number; motiv?: string }>(null);
+  const [finalizat, setFinalizat] = useState<null | { scor: number; corecte?: number; greseli: number; total?: number; motiv?: string }>(null);
   const [eroare, setEroare] = useState("");
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<"ok" | "bad" | null>(null);
@@ -68,10 +68,18 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
       try {
         const r = await fetch(`/api/test?a=${a}`, { cache: "no-store" });
         const j = await r.json();
-        if (j.ok && j.finalizat) setFinalizat({ scor: j.scor, greseli: j.greseli, motiv: j.motiv ?? motiv });
+        if (j.ok && j.finalizat) {
+          setFinalizat({
+            scor: j.scor,
+            corecte: j.corecte,
+            greseli: j.greseli,
+            total: j.total,
+            motiv: j.motiv ?? motiv,
+          });
+        }
       } catch {
         // serverul nu raspunde: aratam tot rezultatul, ca sa nu ramana ecranul blocat
-        setFinalizat({ scor: 0, greseli, motiv: motiv ?? "timp" });
+        setFinalizat({ scor: 0, corecte: 0, greseli, motiv: motiv ?? "timp" });
       }
     },
     [a, greseli],
@@ -90,7 +98,13 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
           return;
         }
         if (j.finalizat) {
-          setFinalizat({ scor: j.scor, greseli: j.greseli, motiv: j.motiv });
+          setFinalizat({
+            scor: j.scor,
+            corecte: j.corecte,
+            greseli: j.greseli,
+            total: j.total,
+            motiv: j.motiv,
+          });
           return;
         }
         inceputRef.current = Date.now();
@@ -182,7 +196,13 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
       return;
     }
     if (j.terminat) {
-      setFinalizat({ scor: j.scor, greseli: j.greseli, motiv: j.motiv });
+      setFinalizat({
+        scor: j.scor,
+        corecte: j.corecte,
+        greseli: j.greseli,
+        total: j.total ?? q?.total,
+        motiv: j.motiv,
+      });
       return;
     }
     setGreseli(j.greseli);
@@ -197,7 +217,13 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
       setQ(toQ(k));
       setRamase(k.ramase);
     } else if (k.ok) {
-      setFinalizat({ scor: k.scor, greseli: k.greseli, motiv: k.motiv });
+      setFinalizat({
+        scor: k.scor,
+        corecte: k.corecte,
+        greseli: k.greseli,
+        total: k.total,
+        motiv: k.motiv,
+      });
     }
   }
 
@@ -220,17 +246,20 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
 
   if (finalizat) {
     const picat = finalizat.scor === 0;
+    const totalIntrebari = finalizat.total ?? q?.total ?? "—";
+    const intrebariReusite = finalizat.corecte ?? (picat ? 0 : finalizat.scor);
+
     return (
       <main className="wrap" style={{ maxWidth: 560 }}>
         <div className="card" style={{ textAlign: "center" }}>
           <h1>{picat ? "Test nereușit" : "Test finalizat"}</h1>
           <p style={{ fontSize: 40, fontWeight: 800, margin: "10px 0" }}>
-            {finalizat.scor} / {q?.total ?? "—"}
+            {intrebariReusite} / {totalIntrebari}
           </p>
           <p className="muted">
             {finalizat.motiv === "anticheat" && "Test picat automat: ai părăsit fereastra / ai dat Alt+Tab."}
             {finalizat.motiv === "timp" && "Timpul a expirat."}
-            {finalizat.motiv === "greseli" && `Ai ajuns la a ${maxGreseli}-a greșeală.`}
+            {finalizat.motiv === "greseli" && `Ai picat: ai răspuns corect la ${intrebariReusite} întrebări și ai atins ${maxGreseli} greșeli.`}
             {(!finalizat.motiv || finalizat.motiv === "final") && "Ai răspuns la toate întrebările."}
           </p>
           <button className="btn" onClick={() => router.push("/")}>Înapoi la teste</button>

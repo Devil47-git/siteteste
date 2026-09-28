@@ -78,11 +78,13 @@ export async function trimiteRaport(
     : "";
 
   // 1. EMBED RAPORT CONDUCERE (Camera ID: 1347936263822376980)
+  // Culoare: Mov/Indigo (0x9b59b6) pentru anticheat, Rosu (0xff2a4b) pentru picat, Verde (0x00e676) pentru promovat
+  const culoareConducere = motiv === "anticheat" ? 0x9b59b6 : picat ? 0xff2a4b : 0x00e676;
   const embedConducere = {
     title: `📊 Raport Conducere - Rezultat Test`,
-    color: picat ? 0xff2a4b : 0x00e676,
+    color: culoareConducere,
     fields: [
-      { name: "Utilizator", value: `<@${user.id}>\n${candidatMention}`, inline: true },
+      { name: "Utilizator", value: `<@${user.id}>`, inline: true },
       { name: "Test", value: `**${t.nume}**`, inline: true },
       { name: "Rezultat", value: rezultatConducere, inline: false },
       { name: "Greșeli", value: `${greseli}/${t.greseliPermise + 1}`, inline: true },
@@ -94,11 +96,12 @@ export async function trimiteRaport(
   };
 
   // 2. EMBED REZULTAT PUBLIC / TESTE (Camera ID: 1347936123950858263)
+  const culoarePublic = motiv === "anticheat" ? 0x9b59b6 : picat ? 0xff2a4b : 0x00e676;
   const embedPublic = {
     title: `Rezultat Test`,
-    color: picat ? 0xff2a4b : 0x00e676,
+    color: culoarePublic,
     fields: [
-      { name: "Candidat:", value: `<@${user.id}> (${candidatMention})`, inline: false },
+      { name: "Candidat:", value: `<@${user.id}>`, inline: false },
       { name: "Test:", value: `**${t.nume}**`, inline: false },
       { name: "Rezultat:", value: `**${rezultatPublic}**`, inline: false },
     ],

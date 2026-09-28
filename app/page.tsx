@@ -99,8 +99,6 @@ export default async function Home() {
               <div>
                 {s.stare === "in_curs" ? (
                   <Link className="btn btn-continue" href={`/test/${t.id}?a=${s.attemptId}`}>Continuă</Link>
-                ) : s.stare === "gata" ? (
-                  <span className="badge-finished">Finalizat</span>
                 ) : acces.permis ? (
                   <Link className="btn medical" href={`/cod/${t.id}`}>Solicită cod</Link>
                 ) : (

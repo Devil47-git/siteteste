@@ -16,6 +16,8 @@ async function finalizeaza(a: any, motiv: string, t: any) {
   }
   const total = intrebariPentru(a.testId).length;
   a.ultimaActiune = a.ultimaActiune ?? Date.now();
+  const corecte = (a.raspunsuri ?? []).filter((r: any) => r.corect).length;
+  a.corecte = corecte;
   a.scor = a.greseli > t.greseliPermise ? 0 : Math.max(0, total - a.greseli);
   await setJson(K.attempt(a.id), a, 3600);
 
@@ -52,11 +54,13 @@ export async function GET(req: Request) {
   const total = intrebariPentru(a.testId).length;
 
   if (a.finalizat) {
-    return NextResponse.json({ ok: true, finalizat: true, scor: a.scor, greseli: a.greseli, total, motiv: a.motiv });
+    const corecte = a.corecte ?? (a.raspunsuri ?? []).filter((r: any) => r.corect).length;
+    return NextResponse.json({ ok: true, finalizat: true, scor: a.scor, corecte, greseli: a.greseli, total, motiv: a.motiv });
   }
   if (Date.now() > a.expira) {
     await finalizeaza(a, "timp", t);
-    return NextResponse.json({ ok: true, finalizat: true, scor: a.scor, greseli: a.greseli, total, motiv: "timp" });
+    const corecte = a.corecte ?? (a.raspunsuri ?? []).filter((r: any) => r.corect).length;
+    return NextResponse.json({ ok: true, finalizat: true, scor: a.scor, corecte, greseli: a.greseli, total, motiv: "timp" });
   }
 
   const pos = a.index;
@@ -103,6 +107,7 @@ export async function POST(req: Request) {
       ok: true,
       terminat: true,
       scor: 0,
+      corecte: a.corecte ?? 0,
       greseli: a.greseli,
       motiv: "anticheat",
     });
@@ -136,6 +141,7 @@ export async function POST(req: Request) {
       ok: true,
       terminat: true,
       scor: a.scor,
+      corecte: a.corecte,
       greseli: a.greseli,
       motiv: a.motiv,
     });

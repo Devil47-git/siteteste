@@ -74,6 +74,8 @@ export async function POST(req: Request) {
     t.timpSecunde + 3600,
   );
   await setJson(K.attemptDeUser(user.id, t.id), { attemptId }, t.timpSecunde + 3600);
+  // Retinem cand a fost susținut testul, ca sa calculam cooldown-ul per test.
+  await setJson(K.cdDeUser(user.id, t.id), Date.now(), t.cdZile * 24 * 3600 + 86400);
 
   return NextResponse.json({ ok: true, attemptId, timp: t.timpSecunde, greseliPermise: t.greseliPermise });
 }

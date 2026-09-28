@@ -10,6 +10,7 @@ type Props = {
   attemptId: string;
   numeTest: string;
   greseliPermise: number;
+  cdZile: number;
 };
 
 type Q = {
@@ -37,7 +38,7 @@ function toQ(j: {
   };
 }
 
-export default function TestClient({ attemptId, numeTest, greseliPermise }: Props) {
+export default function TestClient({ attemptId, numeTest, greseliPermise, cdZile }: Props) {
   const router = useRouter();
   const [q, setQ] = useState<Q | null>(null);
   const [ales, setAles] = useState<number | null>(null);
@@ -273,6 +274,7 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
     const intrebariReusite = finalizat.corecte ?? (picat ? 0 : finalizat.scor);
     const picatLa = finalizat.picatLa ?? intrebariReusite;
     const motiv = finalizat.motiv;
+    const anticheat = motiv === "anticheat";
 
     return (
       <main className="wrap" style={{ maxWidth: 560 }}>
@@ -288,8 +290,12 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
             {picat ? "Ai picat la întrebarea" : "Întrebări corecte"}
           </p>
           <p className="muted" style={{ fontSize: 14, lineHeight: 1.6 }}>
-            {motiv === "anticheat" &&
-              "Test picat automat: ai părăsit fereastra de examinare / ai dat Alt+Tab."}
+            {anticheat && (
+              <>
+                Test picat automat: ai părăsit fereastra de examinare / ai dat Alt+Tab.
+                {picatLa > 1 && ` Ai răspuns corect la primele ${picatLa - 1} întrebări din ${totalIntrebari}.`}
+              </>
+            )}
             {motiv === "timp" && "Timpul a expirat."}
             {motiv === "greseli" &&
               `Ai picat la întrebarea ${picatLa} din ${totalIntrebari}. Ai răspuns corect la ${intrebariReusite} întrebări și ai atins ${maxGreseli} greșeli.`}
@@ -297,7 +303,7 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
               `Ai răspuns corect la toate cele ${totalIntrebari} întrebări. Rezultatul a fost trimis pe Discord.`}
           </p>
           <p className="muted" style={{ fontSize: 13, marginTop: 14 }}>
-            Poți susține din nou testul oricând.
+            Cooldown de {cdZile} zile înainte de a putea relua testul.
           </p>
           <button className="btn" style={{ marginTop: 10 }} onClick={() => router.push("/")}>
             Înapoi la teste

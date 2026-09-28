@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
-import { getTest, COD_INTERVAL_SECUNDE } from "@/lib/config";
+import { getTest, COD_INTERVAL_SECUNDE, cooldownRamase } from "@/lib/config";
 import { generateCode, hashCode, COD_TTL_SEC } from "@/lib/cod";
 import { getJson, setJson, store, K } from "@/lib/store";
 import { postMessage, button, container, webhook } from "@/lib/discord";
@@ -34,10 +34,21 @@ export async function POST(req: Request) {
     );
   }
 
+  // Cooldown per test: 5 zile (S.M.U.L.S / Rezidentiat), 3 zile (B.L.S / Radio)
+  const ultima = await getJson<number>(K.cdDeUser(user.id, t.id));
+  const cdMs = cooldownRamase(t.cdZile, ultima);
+  if (cdMs > 0) {
+    const zile = Math.ceil(cdMs / 86400000);
+    return NextResponse.json(
+      { ok: false, mesaj: `Ai cooldown de ${t.cdZile} zile pentru acest test. Mai poți susține peste ${zile} ${zile === 1 ? "zi" : "zile"}.` },
+      { status: 429 },
+    );
+  }
+
   const intervalKey = K.attemptDeUser(user.id, `int:${t.id}`);
-  const ultima = await getJson<number>(intervalKey);
-  if (ultima && Date.now() - ultima < COD_INTERVAL_SECUNDE * 1000) {
-    const asteapta = Math.ceil((COD_INTERVAL_SECUNDE * 1000 - (Date.now() - ultima)) / 1000);
+  const ultimaCerere = await getJson<number>(intervalKey);
+  if (ultimaCerere && Date.now() - ultimaCerere < COD_INTERVAL_SECUNDE * 1000) {
+    const asteapta = Math.ceil((COD_INTERVAL_SECUNDE * 1000 - (Date.now() - ultimaCerere)) / 1000);
     return NextResponse.json(
       { ok: false, mesaj: `Asteapta ${asteapta}s pana la urmatoarea cerere.` },
       { status: 429 },

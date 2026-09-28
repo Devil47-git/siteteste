@@ -26,6 +26,6 @@ export default async function PaginaTest({
   if (!link || link.attemptId !== a) redirect(`/cod/${id}`);
 
   return (
-    <TestClient attemptId={a} numeTest={t.nume} greseliPermise={t.greseliPermise} />
+    <TestClient attemptId={a} numeTest={t.nume} greseliPermise={t.greseliPermise} cdZile={t.cdZile} />
   );
 }

@@ -9,7 +9,74 @@ export type MembruMedical = {
   poateRezidentiat: boolean;
   poateBLS: boolean;
   poateRadio: boolean;
+  /** Cooldown din coloana S a Google Sheets: data la care expiră per test. */
+  cooldowns: Partial<Record<TestIdCooldown, number>>;
 };
+
+/** Testele pentru care exista cooldown pe coloana S. */
+export type TestIdCooldown = "smuls" | "rezidentiat" | "bls" | "radio";
+
+/** Zilele de cooldown per test (S.M.U.L.S/Rezidentiat: 5, B.L.S/Radio: 3). */
+export const ZILE_CD: Record<TestIdCooldown, number> = {
+  smuls: 5,
+  rezidentiat: 5,
+  bls: 3,
+  radio: 3,
+};
+function testDinText(segment: string): TestIdCooldown | null {
+  const t = segment.toLowerCase();
+  // Ordinea conteaza: "smuls" inainte de "s" generice, "bls" inainte de "ls".
+  if (/\bsmuls\b|smuls|s\.?m\.?u\.?l\.?s/.test(t)) return "smuls";
+  if (/\brezi\b|rezidentiat/.test(t)) return "rezidentiat";
+  if (/\bbls\b/.test(t)) return "bls";
+  if (/\bradio\b|tet/.test(t)) return "radio";
+  return null;
+}
+
+/**
+ * Extrage data de EXPIRARE a cooldownului din segment: „30.09”, „30.09.2026”, „30/09”.
+ * Data din coloana S este deja data la care CD-ul expiră, deci nu mai adăugăm zile.
+ */
+function dataDinText(segment: string): number | null {
+  const m = segment.match(/(\d{1,2})\s*[./-]\s*(\d{1,2})(?:\s*[./-]\s*(\d{2,4}))?/);
+  if (!m) return null;
+  const zi = Number(m[1]);
+  const luna = Number(m[2]);
+  if (luna < 1 || luna > 12) return null;
+  const acum = new Date();
+  let an = m[3] ? Number(m[3]) : acum.getFullYear();
+  if (m[3] && an < 100) an += 2000;
+  if (!m[3]) {
+    // Fără an: dacă data ar fi trecută de mai mult de 30 de zile, e anul următor.
+    const candidat = new Date(an, luna - 1, zi);
+    candidat.setHours(23, 59, 59, 999);
+    if (candidat.getTime() < acum.getTime() - 30 * 86400000) an += 1;
+  }
+  const d = new Date(an, luna - 1, zi);
+  d.setHours(23, 59, 59, 999);
+  return isNaN(d.getTime()) ? null : d.getTime();
+}
+
+/**
+ * Parsează coloana S și întoarce data la care expiră cooldownul per test.
+ * Colonna e text liber, ex: „ Rezi - ( 29.09 )  /  MOTO - ( 29.09 ) /PILOT 01.10”
+ * sau „SMULS P 30.09 /REZIDENTIAT 02.10”.
+ * Data scrisă este data de EXPIRARE a CD-ului.
+ * Segmente sunt separate prin „/”; certificările nerecunoscute sunt ignorate.
+ */
+export function parseCooldownS(continut: string | null | undefined): Partial<Record<TestIdCooldown, number>> {
+  const rezultat: Partial<Record<TestIdCooldown, number>> = {};
+  if (!continut) return rezultat;
+  for (const segment of String(continut).split("/")) {
+    const test = testDinText(segment);
+    if (!test) continue;
+    const data = dataDinText(segment);
+    if (data === null) continue;
+    // Dacă apare de mai multe ori, păstrăm data cea mai târzie (CD cel mai lung).
+    rezultat[test] = Math.max(rezultat[test] ?? 0, data);
+  }
+  return rezultat;
+}
 
 const SHEET_ID = "1uaXnzKcNeOOXrQB2TU2aGrq9ZTie4AeFlAUX_FhH06M";
 const SHEET_GID = "288034789";
@@ -54,6 +121,7 @@ export async function preiaMembriDinSheet(): Promise<Map<string, MembruMedical>>
       const callsignRaw = c[2]?.v !== null && c[2]?.v !== undefined ? String(c[2]?.v).trim() : "";
       const numeRaw = c[3]?.v !== null && c[3]?.v !== undefined ? String(c[3]?.v).trim() : "";
       const gradRaw = c[4]?.v !== null && c[4]?.v !== undefined ? String(c[4]?.v).trim() : "";
+      const cdRaw = c[18]?.v !== null && c[18]?.v !== undefined ? String(c[18]?.v).trim() : "";
       const discordIdRaw = c[19]?.v !== null && c[19]?.v !== undefined ? String(c[19]?.v).trim() : "";
 
       if (!discordIdRaw) continue;
@@ -123,6 +191,7 @@ export async function preiaMembriDinSheet(): Promise<Map<string, MembruMedical>>
         poateRezidentiat,
         poateBLS,
         poateRadio,
+        cooldowns: parseCooldownS(cdRaw),
       });
     }
 

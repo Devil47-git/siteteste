@@ -89,6 +89,7 @@ export const K = {
   codDeUser: (userId: string) => `cu:${userId}`, // cod:ultimul cerut de user
   attempt: (id: string) => `a:${id}`, // attempt:id
   attemptDeUser: (userId: string, testId: string) => `au:${userId}:${testId}`,
+  cdDeUser: (userId: string, testId: string) => `cd:${userId}:${testId}`, // data ultimei susțineri
 };
 
 export async function getJson<T>(key: string): Promise<T | null> {

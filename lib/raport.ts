@@ -4,6 +4,21 @@ import { postMessage, postWebhook } from "./discord";
 import { formatMs } from "./format";
 
 /**
+ * ID-urile rolurilor Discord pentru fiecare grad, citite din env:
+ *   DISCORD_GRAD_ROLE_IDS="MEDIC CHIRURG=123456,DIRECTOR GENERAL=789"
+ * Dacă nu e setat sau gradul nu există, se afișează doar mention-ul persoanei.
+ */
+function roluriGrade(): Record<string, string> {
+  const raw = process.env.DISCORD_GRAD_ROLE_IDS ?? "";
+  const map: Record<string, string> = {};
+  for (const pereche of raw.split(",").map((s) => s.trim()).filter(Boolean)) {
+    const [nume, id] = pereche.split("=").map((s) => s.trim());
+    if (nume && id) map[nume.toUpperCase()] = id;
+  }
+  return map;
+}
+
+/**
  * Trimite rapoartele de test pe cele doua canale:
  * 1. DISCORD_WEBHOOK_CONDUCERE (sau fallback pe canal ID 1347936263822376980)
  * 2. DISCORD_WEBHOOK_REZULTATE (sau fallback pe canal ID 1347936123950858263)
@@ -30,8 +45,14 @@ export async function trimiteRaport(
   const numeCurat = user.membru?.nume || user.globalName || user.username;
   const candidatMention = `@${callsign}${numeCurat}`;
 
-  // Cooldown calculat (ex: 3 zile de la data curenta)
-  const d = new Date(Date.now() + 3 * 24 * 3600 * 1000);
+  // Tag cu rolul/gradul persoanei, afișat deasupra embled-ului.
+  const gradCurat = String(user.membru?.grad ?? "").trim();
+  const rolId = gradCurat ? roluriGrade()[gradCurat.toUpperCase()] : undefined;
+  const tagCandidat = rolId ? `<@&${rolId}> ` : "";
+  const antet = `${tagCandidat}<@${user.id}>`;
+
+  // Cooldown calculat per test (S.M.U.L.S/Rezidentiat: 5 zile, B.L.S/Radio: 3 zile)
+  const d = new Date(Date.now() + (t.cdZile ?? 3) * 24 * 3600 * 1000);
   const zi = String(d.getDate()).padStart(2, "0");
   const luna = String(d.getMonth() + 1).padStart(2, "0");
   const an = d.getFullYear();
@@ -78,8 +99,8 @@ export async function trimiteRaport(
     ? `\n\n❌ **Greșeli**\n${greseliCampuri.join("\n\n")}`
     : "";
 
-  // 1. EMBED RAPORT CONDUCERE (Camera ID: 1347936263822376980)
-  // Culoare: Mov/Indigo (0x9b59b6) pentru anticheat, Rosu (0xff2a4b) pentru picat, Verde (0x00e676) pentru promovat
+  // 1. EMBED RAPORT CONDUCERE
+  // Culoare: Mov/Indigo (0x9b59b6) pentru anticheat, Rosu (0xff2a4b) pentru picat, Verde (0x00e676) pentru admis
   const culoareConducere = motiv === "anticheat" ? 0x9b59b6 : picat ? 0xff2a4b : 0x00e676;
   const embedConducere = {
     title: `📊 Raport Conducere - Rezultat Test`,
@@ -137,7 +158,8 @@ export async function trimiteRaport(
 
   let trimisRezultate = false;
   if (webhookRezultate) {
-    trimisRezultate = await postWebhook("DISCORD_WEBHOOK_REZULTATE", "", [embedPublic])
+    // Tag-ul persoanei merge in `content` (deasupra embled-ului), nu in embed.
+    trimisRezultate = await postWebhook("DISCORD_WEBHOOK_REZULTATE", antet, [embedPublic])
       .then(() => true)
       .catch((e) => {
         console.error("Webhook rezultate failed:", e);
@@ -145,7 +167,7 @@ export async function trimiteRaport(
       });
   }
   if (!trimisRezultate && process.env.DISCORD_BOT_TOKEN) {
-    await postMessage(canalRezultateId, "", [embedPublic]).catch((e) =>
+    await postMessage(canalRezultateId, antet, [embedPublic]).catch((e) =>
       console.error("Bot post to Rezultate failed:", e)
     );
   }

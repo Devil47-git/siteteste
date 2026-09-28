@@ -8,7 +8,7 @@ import { trimiteRaport } from "@/lib/raport";
 export const dynamic = "force-dynamic";
 
 /** Marcheaza tentativa ca finalizata si trimite raportul pe Discord (o singura data). */
-async function finalizeaza(a: any, motiv: string, t: any) {
+async function finalizeaza(a: any, motiv: string, t: any, picatFortat = false) {
   if (!t) return a;
   if (!a.finalizat) {
     a.finalizat = true;
@@ -19,7 +19,10 @@ async function finalizeaza(a: any, motiv: string, t: any) {
   const corecte = (a.raspunsuri ?? []).filter((r: any) => r.corect).length;
   a.corecte = corecte;
   a.total = total;
-  const picat = a.greseli > t.greseliPermise;
+  // Motivele care inseamna automat RESPINS: prea multe greseli, timp expirat
+  // sau anticheat. La "final" (toate intrebarile raspunse) se decide doar dupa greseli.
+  const picatFortatDeMotiv = motiv === "greseli" || motiv === "timp" || motiv === "anticheat";
+  const picat = picatFortat || picatFortatDeMotiv || a.greseli > t.greseliPermise;
   a.admis = !picat;
   a.scor = picat ? 0 : Math.max(0, total - a.greseli);
   // Intrebarea la care s-a picat (1-based). Daca nu s-a picat, se considera ultima intrebare.
@@ -125,8 +128,7 @@ export async function POST(req: Request) {
 
   // ANTI-CHEAT TRIGGER: Daca a parasit tab-ul / a dat alt-tab
   if (body.anticheat) {
-    a.scor = 0;
-    await finalizeaza(a, "anticheat", t);
+    await finalizeaza(a, "anticheat", t, true);
     return NextResponse.json({
       ok: true,
       terminat: true,

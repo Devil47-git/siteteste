@@ -67,13 +67,27 @@ function dataDinText(segment: string): number | null {
 export function parseCooldownS(continut: string | null | undefined): Partial<Record<TestIdCooldown, number>> {
   const rezultat: Partial<Record<TestIdCooldown, number>> = {};
   if (!continut) return rezultat;
-  for (const segment of String(continut).split("/")) {
-    const test = testDinText(segment);
-    if (!test) continue;
-    const data = dataDinText(segment);
+  const text = String(continut);
+
+  // 1) Testele recunoscute in intreaga celula (ordinea si impartirea cu "/" nu conteaza).
+  const gasite: TestIdCooldown[] = [];
+  for (const segment of text.split("/")) {
+    const t = testDinText(segment);
+    if (t && !gasite.includes(t)) gasite.push(t);
+  }
+  if (gasite.length === 0) return rezultat;
+
+  // 2) Toate datele din celula.
+  const dateStr = text.match(/(\d{1,2})\s*[./-]\s*(\d{1,2})(?:\s*[./-]\s*(\d{2,4}))?/g) ?? [];
+
+  for (const t of gasite) {
+    // 3) Formatul nu conteaza: "test/test data", "test /test / test data",
+    //    "test data / test data" etc. Ultima data din celula se aplica
+    //    tuturor testelor recunoscute (CD cel mai lung = cel mai restrictiv).
+    const candidat = dateStr[dateStr.length - 1];
+    const data = dataDinText(candidat);
     if (data === null) continue;
-    // Dacă apare de mai multe ori, păstrăm data cea mai târzie (CD cel mai lung).
-    rezultat[test] = Math.max(rezultat[test] ?? 0, data);
+    rezultat[t] = Math.max(rezultat[t] ?? 0, data);
   }
   return rezultat;
 }

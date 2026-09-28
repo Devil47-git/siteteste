@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
-import { TESTS, GHID_URL, GHID_SECTIUNI, linkGhid, cooldownRamase } from "@/lib/config";
+import { TESTS, GHID_URL, GHID_SECTIUNI, linkGhid } from "@/lib/config";
 import { getJson, K } from "@/lib/store";
-import { gasesteMembruDupaDiscordId, areAccesLaTest, ZILE_CD } from "@/lib/sheets";
+import { gasesteMembruDupaDiscordId, areAccesLaTest } from "@/lib/sheets";
 import Regulament from "./Regulament";
 
 export const dynamic = "force-dynamic";
@@ -17,15 +17,10 @@ export default async function Home() {
 
   const status = await Promise.all(
     TESTS.map(async (t) => {
-      // CD din Redis (test susținut pe site) sau din coloana S a Google Sheets.
-      const cdLocal = await getJson<number>(K.cdDeUser(user.id, t.id));
-      const cdSheet = membru?.cooldowns?.[t.id as keyof typeof ZILE_CD];
-      const panaLa = Math.max(cooldownRamase(t.cdZile, cdLocal), cdSheet ? cdSheet - Date.now() : 0);
-      const cdMs = Math.max(0, panaLa);
       const a = await getJson<any>(K.attemptDeUser(user.id, t.id));
-      if (!a) return { id: t.id, stare: "nou" as const, cdMs };
+      if (!a) return { id: t.id, stare: "nou" as const };
       const att = await getJson<any>(K.attempt(a.attemptId));
-      if (!att) return { id: t.id, stare: "nou" as const, cdMs };
+      if (!att) return { id: t.id, stare: "nou" as const };
       if (att.finalizat) {
         return {
           id: t.id,
@@ -33,24 +28,12 @@ export default async function Home() {
           admis: att.admis ?? att.scor > 0,
           scor: att.picatLa ?? att.corecte ?? 0,
           total: att.total ?? null,
-          cdMs,
         };
       }
-      if (Date.now() < att.expira) return { id: t.id, stare: "in_curs" as const, attemptId: a.attemptId, cdMs };
-      return { id: t.id, stare: "nou" as const, cdMs };
+      if (Date.now() < att.expira) return { id: t.id, stare: "in_curs" as const, attemptId: a.attemptId };
+      return { id: t.id, stare: "nou" as const };
     }),
   );
-
-  /** Formatarea timpului de așteptare: „3 zile 4 h” / „5 h 20 min”. */
-  function formatRamase(ms: number): string {
-    const totalMin = Math.ceil(ms / 60000);
-    const zile = Math.floor(totalMin / 1440);
-    const ore = Math.floor((totalMin % 1440) / 60);
-    const min = totalMin % 60;
-    if (zile > 0) return `${zile} ${zile === 1 ? "zi" : "zile"}${ore ? ` ${ore} h` : ""}`;
-    if (ore > 0) return `${ore} h${min ? ` ${min} min` : ""}`;
-    return `${min} min`;
-  }
 
   const numeAfisat = membru ? membru.nume : user.globalName || user.username;
   const esteConducere = membru ? membru.esteConducere : false;
@@ -137,18 +120,11 @@ export default async function Home() {
                     📘 Învață: {ghid.label}
                   </a>
                 )}
-                {s.cdMs > 0 && s.stare !== "in_curs" && (
-                  <div className="cd-info">⏳ Cooldown: mai poți susține testul în {formatRamase(s.cdMs)}</div>
-                )}
               </div>
 
               <div>
                 {s.stare === "in_curs" ? (
                   <Link className="btn btn-continue" href={`/test/${t.id}?a=${s.attemptId}`}>Continuă</Link>
-                ) : s.cdMs > 0 ? (
-                  <button className="btn ghost" disabled title={`Cooldown de ${t.cdZile} zile`}>
-                    În cooldown
-                  </button>
                 ) : acces.permis ? (
                   <Link className="btn medical" href={`/cod/${t.id}`}>
                     {s.stare === "gata" ? "Reluează testul" : "Solicită cod"}

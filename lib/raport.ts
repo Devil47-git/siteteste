@@ -152,15 +152,24 @@ export async function trimiteRaport(
 
   // Trimite catre canalul de REZULTATE TESTE.
   // ID-ul se poate override-a din env (DISCORD_REZULTATE_CHANNEL_ID) ca sa nu
-  // ajunga rezultatele in canalul de coduri/cereri.
-  const canalRezultateId = (process.env.DISCORD_REZULTATE_CHANNEL_ID ?? "").trim() || "1347936123950858263";
+  // 2. REZULTATELE merg EXCLUSIV in canalul de rezultate (1347936123950858263),
+  //    niciodata in canalul de cereri de cod. Daca webhook-ul nu e configurat,
+  //    cadem pe bot direct, dar tot in acelasi canal.
+  const canalRezultateId =
+    (process.env.DISCORD_REZULTATE_CHANNEL_ID ?? "").trim() || "1347936123950858263";
   const webhookRezultate = process.env.DISCORD_WEBHOOK_REZULTATE;
+
+  if (!webhookRezultate) {
+    console.warn(
+      `[raport] DISCORD_WEBHOOK_REZULTATE lipseste; trimit rezultatele prin bot in canalul ${canalRezultateId}.`,
+    );
+  }
 
   let trimisRezultate = false;
   if (webhookRezultate) {
     // Tag-ul persoanei merge in `content` (deasupra embled-ului), nu in embed.
     trimisRezultate = await postWebhook("DISCORD_WEBHOOK_REZULTATE", antet, [embedPublic])
-      .then(() => true)
+      .then((r) => r !== null)
       .catch((e) => {
         console.error("Webhook rezultate failed:", e);
         return false;

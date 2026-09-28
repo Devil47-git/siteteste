@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { getTest } from "@/lib/config";
 import { getJson, setJson, K } from "@/lib/store";
-import { ordineIntrebari, esteCorect, intrebariPentru } from "@/lib/intrebari";
+import { ordineIntrebari, variantaCorecta, pozitieLaOriginal, optiuniAmestecate, intrebariPentru } from "@/lib/intrebari";
 import { trimiteRaport } from "@/lib/raport";
 
 export const dynamic = "force-dynamic";
@@ -92,8 +92,8 @@ export async function GET(req: Request) {
 
   const pos = a.index;
   const idxBanc = ordine[pos];
-  const q = intrebariPentru(a.testId)[idxBanc];
-  if (!q) {
+  const amestecate = optiuniAmestecate(a.testId, idxBanc, a.id);
+  if (!amestecate) {
     return NextResponse.json({ ok: true, finalizat: true, scor: a.scor ?? 0, greseli: a.greseli, total });
   }
 
@@ -103,8 +103,8 @@ export async function GET(req: Request) {
     index: idxBanc,
     pozitie: pos,
     total,
-    intrebare: q.intrebare,
-    optiuni: q.optiuni,
+    intrebare: intrebariPentru(a.testId)[idxBanc].intrebare,
+    optiuni: amestecate.optiuni,
     greseli: a.greseli,
     greseliPermise: t.greseliPermise,
     ramase: Math.max(0, Math.floor((a.expira - Date.now()) / 1000)),
@@ -166,9 +166,12 @@ export async function POST(req: Request) {
 
   const pos = a.index;
   const idxBanc = ordine[pos];
-  const corect = esteCorect(a.testId, idxBanc, v);
+  // Pozitia aleasa de client e cea afisata (amestecata); o verificam direct.
+  const corect = variantaCorecta(a.testId, idxBanc, a.id, v);
+  // Retinem si indexul original, ca raportul de greseli sa arate raspunsul corect.
+  const original = pozitieLaOriginal(a.testId, idxBanc, a.id, v);
 
-  a.raspunsuri.push({ i: idxBanc, v, corect });
+  a.raspunsuri.push({ i: idxBanc, v: original, corect });
   if (!corect) a.greseli += 1;
 
   const preaMulte = a.greseli > t.greseliPermise;

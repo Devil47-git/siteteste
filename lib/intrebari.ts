@@ -38,12 +38,6 @@ export function intrebareLa(testId: string, index: number): Intrebare | null {
   return intrebariPentru(testId)[index] ?? null;
 }
 
-/** Verifica daca un index de intrebare raspunde corect. */
-export function esteCorect(testId: string, index: number, varianta: number) {
-  const q = intrebareLa(testId, index);
-  return q ? indexCorect(q) === varianta : false;
-}
-
 /** Shuffle determinist pe baza attemptId, ca reluarea aceleiasi intrebari sa difere. */
 export function shuffleDeterministic<T>(arr: T[], seed: string): T[] {
   const out = [...arr];
@@ -69,4 +63,77 @@ export function ordineIntrebari(testId: string, attemptId: string): number[] {
     intrebariPentru(testId).map((_, i) => i),
     `${attemptId}:${testId}`,
   );
+}
+
+/**
+ * Returneaza optiunile intrebarii amestecate si pozitia raspunsului corect.
+ * Shuffle-ul e determinist pe baza attemptId + indicele intrebarii, deci:
+ *  - la aceeasi intrebare, optiunile au mereu aceeasi ordine (reload nu schimba nimic),
+ *  - intre doua teste diferite, raspunsul corect cade in pozitii diferite.
+ */
+export function optiuniAmestecate(
+  testId: string,
+  index: number,
+  attemptId: string,
+): { optiuni: string[]; indexCorect: number } | null {
+  const p = permutare(testId, index, attemptId);
+  if (!p) return null;
+  return { optiuni: p.elemente.map((e) => e.text), indexCorect: p.pozCorect };
+}
+
+/** hash numeric determinist, in [0, 2^32) */
+function hashInt(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+/** Permutarea optiunilor unei intrebari, pastrand indicii originali. */
+function permutare(
+  testId: string,
+  index: number,
+  attemptId: string,
+): { elemente: { text: string; i: number }[]; pozCorect: number } | null {
+  const q = intrebareLa(testId, index);
+  if (!q) return null;
+  const corect = indexCorect(q);
+  if (corect < 0) return null;
+
+  const etichete = q.optiuni.map((text, i) => ({ text, i }));
+  const amestecate = shuffleDeterministic(etichete, `${attemptId}:${testId}:opt:${index}`);
+  const poz = amestecate.length
+    ? hashInt(`${attemptId}:${testId}:poz:${index}`) % amestecate.length
+    : 0;
+
+  const baza = amestecate.findIndex((e) => e.i === corect);
+  if (baza < 0) return null;
+  const element = amestecate.splice(baza, 1)[0];
+  amestecate.splice(poz, 0, element);
+  return { elemente: amestecate, pozCorect: poz };
+}
+
+/**
+ * Translateaza pozitia afisata de client in indexul original din banca.
+ * Fiecare element e o pozitie distincta, deci maparea e bijectiva si reversibila.
+ */
+export function pozitieLaOriginal(
+  testId: string,
+  index: number,
+  attemptId: string,
+  pozitie: number,
+): number {
+  const p = permutare(testId, index, attemptId);
+  if (!p || pozitie < 0 || pozitie >= p.elemente.length) return -1;
+  return p.elemente[pozitie].i;
+}
+
+/** Verifica daca pozitia afisata de client este cea corecta. */
+export function variantaCorecta(
+  testId: string,
+  index: number,
+  attemptId: string,
+  pozitie: number,
+): boolean {
+  const p = permutare(testId, index, attemptId);
+  return !!p && p.pozCorect === pozitie;
 }

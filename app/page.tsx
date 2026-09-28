@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import HomeRefresh from "./HomeRefresh";
 import { getUser } from "@/lib/auth";
 import { TESTS, GHID_URL, GHID_SECTIUNI, linkGhid } from "@/lib/config";
 import { getJson, K } from "@/lib/store";
@@ -18,6 +19,7 @@ export default async function Home() {
   const status = await Promise.all(
     TESTS.map(async (t) => {
       // CD din coloana S a Google Sheets (informativ: se afiseaza, dar NU blocheaza testul).
+      // CD din coloana S a Google Sheets = data la care expiră. Dacă e în viitor, blochează testul.
       const cdSheet = membru?.cooldowns?.[t.id as keyof typeof ZILE_CD];
       const cdMs = cdSheet ? Math.max(0, cdSheet - Date.now()) : 0;
       const a = await getJson<any>(K.attemptDeUser(user.id, t.id));
@@ -45,6 +47,7 @@ export default async function Home() {
 
   return (
     <main className="wrap">
+      <HomeRefresh />
       {/* Top Profile Bar futuristic */}
       <div className="card profile-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, padding: "20px 24px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -129,10 +132,10 @@ export default async function Home() {
                     📘 Învață: {ghid.label}
                   </a>
                 )}
-                {s.cdMs > 0 && s.stare !== "in_curs" && (
-                  <div className="cd-info" title="Informație din Google Sheets — nu te împiedică să susții testul.">
-                    ⏳ Cooldown (până pe {new Date(Date.now() + s.cdMs).toLocaleDateString("ro-RO")})
-                    — poți da testul, doar daca CD acesta ti-a expirat sau l-ai plătit.
+                {s.cdMs > 0 && (
+                  <div className="cd-info" title="Cooldown înregistrat în Google Sheets (coloana S).">
+                    ⏳ Cooldown activ până pe {new Date(Date.now() + s.cdMs).toLocaleDateString("ro-RO")}
+                    {" "}— testul este blocat până când expiră sau este șters de pe Docs.
                   </div>
                 )}
               </div>
@@ -140,6 +143,10 @@ export default async function Home() {
               <div>
                 {s.stare === "in_curs" ? (
                   <Link className="btn btn-continue" href={`/test/${t.id}?a=${s.attemptId}`}>Continuă</Link>
+                ) : s.cdMs > 0 ? (
+                  <button className="btn ghost" disabled title={`Cooldown până pe ${new Date(Date.now() + s.cdMs).toLocaleDateString("ro-RO")}`}>
+                    ⏳ În cooldown
+                  </button>
                 ) : acces.permis ? (
                   <Link className="btn medical" href={`/cod/${t.id}`}>
                     {s.stare === "gata" ? "Reluează testul" : "Solicită cod"}

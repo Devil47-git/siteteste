@@ -47,8 +47,9 @@ export async function trimiteRaport(
     rezultatConducere = `RESPINS (cooldown până pe ${cooldownData})`;
     rezultatPublic = `RESPINS (${cooldownData})`;
   } else {
-    rezultatConducere = `PROMOVAT (${corecte}/${total} corecte)`;
-    rezultatPublic = `PROMOVAT (${corecte}/${total})`;
+    // La admis nu mai afisam scorul intre paranteze, doar statusul.
+    rezultatConducere = `ADMIS (${greseli} greseli din ${t.greseliPermise + 1} posibile)`;
+    rezultatPublic = `ADMIS`;
   }
 
   // Colectam greselile cu intrebarea, raspunsul corect si raspunsul dat de candidat
@@ -128,8 +129,10 @@ export async function trimiteRaport(
     );
   }
 
-  // Trimite catre Rezultate Teste (Webhook rezultate sau camera 1347936123950858263)
-  const canalRezultateId = "1347936123950858263";
+  // Trimite catre canalul de REZULTATE TESTE.
+  // ID-ul se poate override-a din env (DISCORD_REZULTATE_CHANNEL_ID) ca sa nu
+  // ajunga rezultatele in canalul de coduri/cereri.
+  const canalRezultateId = (process.env.DISCORD_REZULTATE_CHANNEL_ID ?? "").trim() || "1347936123950858263";
   const webhookRezultate = process.env.DISCORD_WEBHOOK_REZULTATE;
 
   let trimisRezultate = false;

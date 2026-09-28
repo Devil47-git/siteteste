@@ -43,7 +43,15 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
   const [ales, setAles] = useState<number | null>(null);
   const [greseli, setGreseli] = useState(0);
   const [ramase, setRamase] = useState<number | null>(null);
-  const [finalizat, setFinalizat] = useState<null | { scor: number; corecte?: number; greseli: number; total?: number; motiv?: string }>(null);
+  const [finalizat, setFinalizat] = useState<null | {
+    scor: number;
+    corecte?: number;
+    greseli: number;
+    total?: number;
+    motiv?: string;
+    admis?: boolean;
+    picatLa?: number;
+  }>(null);
   const [eroare, setEroare] = useState("");
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<"ok" | "bad" | null>(null);
@@ -61,6 +69,8 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
 
   const a = attemptId;
 
+
+
   const finalizeaza = useCallback(
     async (motiv?: string) => {
       if (trimisRef.current) return;
@@ -75,11 +85,13 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
             greseli: j.greseli,
             total: j.total,
             motiv: j.motiv ?? motiv,
+            admis: j.admis,
+            picatLa: j.picatLa,
           });
         }
       } catch {
         // serverul nu raspunde: aratam tot rezultatul, ca sa nu ramana ecranul blocat
-        setFinalizat({ scor: 0, corecte: 0, greseli, motiv: motiv ?? "timp" });
+        setFinalizat({ scor: 0, corecte: 0, greseli, motiv: motiv ?? "timp", admis: false });
       }
     },
     [a, greseli],
@@ -104,6 +116,8 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
             greseli: j.greseli,
             total: j.total,
             motiv: j.motiv,
+            admis: j.admis,
+            picatLa: j.picatLa,
           });
           return;
         }
@@ -151,13 +165,17 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
         setFinalizat({
           scor: 0,
           greseli: j.greseli ?? greseli,
+          total: j.total,
           motiv: "anticheat",
+          admis: false,
+          picatLa: j.picatLa,
         });
       } catch {
         setFinalizat({
           scor: 0,
           greseli,
           motiv: "anticheat",
+          admis: false,
         });
       }
     };
@@ -202,6 +220,8 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
         greseli: j.greseli,
         total: j.total ?? q?.total,
         motiv: j.motiv,
+        admis: j.admis,
+        picatLa: j.picatLa,
       });
       return;
     }
@@ -223,6 +243,8 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
         greseli: k.greseli,
         total: k.total,
         motiv: k.motiv,
+        admis: k.admis,
+        picatLa: k.picatLa,
       });
     }
   }
@@ -245,24 +267,41 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
   }
 
   if (finalizat) {
-    const picat = finalizat.scor === 0;
-    const totalIntrebari = finalizat.total ?? q?.total ?? "—";
+    const totalIntrebari = finalizat.total ?? q?.total ?? 0;
+    // Statusul afisat: ADMIS doar daca nu s-a depasit numarul de greseli permise.
+    const picat = finalizat.admis === false || finalizat.scor === 0;
     const intrebariReusite = finalizat.corecte ?? (picat ? 0 : finalizat.scor);
+    const picatLa = finalizat.picatLa ?? intrebariReusite;
+    const motiv = finalizat.motiv;
 
     return (
       <main className="wrap" style={{ maxWidth: 560 }}>
-        <div className="card" style={{ textAlign: "center" }}>
-          <h1>{picat ? "Test nereușit" : "Test finalizat"}</h1>
-          <p style={{ fontSize: 40, fontWeight: 800, margin: "10px 0" }}>
-            {intrebariReusite} / {totalIntrebari}
+        <div className={`card rezultat ${picat ? "respins" : "admis"}`} style={{ textAlign: "center" }}>
+          <div className="rezultat-badge">{picat ? "RESPINS" : "ADMIS"}</div>
+          <h1 style={{ margin: "10px 0 4px", color: "#fff" }}>
+            {picat ? "Test nereușit" : "Test susținut cu succes"}
+          </h1>
+          <p style={{ fontSize: 34, fontWeight: 800, margin: "8px 0 2px" }}>
+            {picat ? `${picatLa} / ${totalIntrebari}` : `${totalIntrebari} / ${totalIntrebari}`}
           </p>
-          <p className="muted">
-            {finalizat.motiv === "anticheat" && "Test picat automat: ai părăsit fereastra / ai dat Alt+Tab."}
-            {finalizat.motiv === "timp" && "Timpul a expirat."}
-            {finalizat.motiv === "greseli" && `Ai picat: ai răspuns corect la ${intrebariReusite} întrebări și ai atins ${maxGreseli} greșeli.`}
-            {(!finalizat.motiv || finalizat.motiv === "final") && "Ai răspuns la toate întrebările."}
+          <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+            {picat ? "Ai picat la întrebarea" : "Întrebări corecte"}
           </p>
-          <button className="btn" onClick={() => router.push("/")}>Înapoi la teste</button>
+          <p className="muted" style={{ fontSize: 14, lineHeight: 1.6 }}>
+            {motiv === "anticheat" &&
+              "Test picat automat: ai părăsit fereastra de examinare / ai dat Alt+Tab."}
+            {motiv === "timp" && "Timpul a expirat."}
+            {motiv === "greseli" &&
+              `Ai picat la întrebarea ${picatLa} din ${totalIntrebari}. Ai răspuns corect la ${intrebariReusite} întrebări și ai atins ${maxGreseli} greșeli.`}
+            {(!motiv || motiv === "final") &&
+              `Ai răspuns corect la toate cele ${totalIntrebari} întrebări. Rezultatul a fost trimis pe Discord.`}
+          </p>
+          <p className="muted" style={{ fontSize: 13, marginTop: 14 }}>
+            Poți susține din nou testul oricând.
+          </p>
+          <button className="btn" style={{ marginTop: 10 }} onClick={() => router.push("/")}>
+            Înapoi la teste
+          </button>
         </div>
       </main>
     );

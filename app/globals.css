@@ -416,3 +416,79 @@ input.cod:focus {
   border-color: var(--accent-cyan);
   box-shadow: 0 0 20px rgba(0, 210, 255, 0.35);
 }
+
+/* Ecran final de rezultat: ADMIS / RESPINS */
+.card.rezultat { padding: 36px 28px 30px; }
+.card.rezultat::before { height: 3px; }
+
+.card.rezultat.admis::before {
+  background: linear-gradient(90deg, transparent, var(--success-green), transparent);
+}
+.card.rezultat.respins::before {
+  background: linear-gradient(90deg, transparent, var(--medical-crimson), transparent);
+}
+
+.rezultat-badge {
+  display: inline-block;
+  padding: 8px 26px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 3px;
+}
+.card.rezultat.admis .rezultat-badge {
+  background: rgba(0, 230, 118, 0.14);
+  border: 1px solid rgba(0, 230, 118, 0.45);
+  color: var(--success-green);
+  box-shadow: 0 0 24px rgba(0, 230, 118, 0.2);
+}
+.card.rezultat.respins .rezultat-badge {
+  background: rgba(255, 42, 75, 0.14);
+  border: 1px solid rgba(255, 42, 75, 0.45);
+  color: var(--medical-crimson-hover);
+  box-shadow: 0 0 24px rgba(255, 42, 75, 0.2);
+}
+
+/* Card de rezultat istoric pe pagina de teste */
+.rezultat-istoric {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+.rezultat-istoric.admis {
+  color: var(--success-green);
+  background: rgba(0, 230, 118, 0.1);
+  border: 1px solid rgba(0, 230, 118, 0.3);
+}
+.rezultat-istoric.respins {
+  color: #ff9ea8;
+  background: rgba(255, 42, 75, 0.1);
+  border: 1px solid rgba(255, 42, 75, 0.3);
+}
+
+/* Card "Unde invat" */
+.card.ghid-link a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  background: var(--bg-card2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-top: 10px;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.card.ghid-link a:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 210, 255, 0.08);
+  transform: translateX(3px);
+}

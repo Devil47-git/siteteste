@@ -87,6 +87,7 @@ npx vercel        # sau importă proiectul din GitHub
 | `DISCORD_HR_CHANNEL_ID` | id canal HR |
 | `DISCORD_WEBHOOK_URL` | webhook pentru cererile de cod (opțional, rezervă) |
 | `DISCORD_WEBHOOK_REZULTATE` | webhook pentru rapoartele de test |
+| `DISCORD_REZULTATE_CHANNEL_ID` | id-ul canalului **Rezultate Teste** (opțional; implicit se folosește canalul de fallback) |
 | `DISCORD_HR_ROLE_IDS` | id-uri roluri HR (opțional) |
 | `SESSION_SECRET` | string lung aleator |
 | `CODE_SECRET` | alt string lung aleator |

@@ -4,6 +4,23 @@
  * Intrebarile sunt in fisierele din folderul `intrebari/`.
  */
 
+/** Linkul spre ghidul oficial al Departamentului Medical. */
+export const GHID_URL = "https://ghidul-departamentului-medical-eight.vercel.app/";
+
+/** Secțiunea din ghid de unde se poate învăța pentru fiecare test. */
+export const GHID_SECTIUNI: Record<string, { section: string; label: string }> = {
+  smuls: { section: "rp-smuls", label: "Rp S.M.U.L.S. / Cert. S.M.U.L.S." },
+  rezidentiat: { section: "rezidentiat", label: "Rezidentiat" },
+  bls: { section: "rp-teren", label: "Rp teren / Cert. BLS" },
+  radio: { section: "coduri-radio", label: "Coduri Radio" },
+};
+
+/** Link direct spre secțiunea de învățare a unui test. */
+export function linkGhid(testId: string): string {
+  const s = GHID_SECTIUNI[testId];
+  return s ? `${GHID_URL}#${s.section}` : GHID_URL;
+}
+
 export const TESTS = [
   {
     id: "smuls",

@@ -18,7 +18,12 @@ async function finalizeaza(a: any, motiv: string, t: any) {
   a.ultimaActiune = a.ultimaActiune ?? Date.now();
   const corecte = (a.raspunsuri ?? []).filter((r: any) => r.corect).length;
   a.corecte = corecte;
-  a.scor = a.greseli > t.greseliPermise ? 0 : Math.max(0, total - a.greseli);
+  a.total = total;
+  const picat = a.greseli > t.greseliPermise;
+  a.admis = !picat;
+  a.scor = picat ? 0 : Math.max(0, total - a.greseli);
+  // Intrebarea la care s-a picat (1-based). Daca nu s-a picat, se considera ultima intrebare.
+  a.picatLa = picat ? Math.min(total, Math.max(1, a.raspunsuri?.length ?? 1)) : total;
   await setJson(K.attempt(a.id), a, 3600);
 
   if (!a.raportTrimis) {
@@ -55,12 +60,31 @@ export async function GET(req: Request) {
 
   if (a.finalizat) {
     const corecte = a.corecte ?? (a.raspunsuri ?? []).filter((r: any) => r.corect).length;
-    return NextResponse.json({ ok: true, finalizat: true, scor: a.scor, corecte, greseli: a.greseli, total, motiv: a.motiv });
+    return NextResponse.json({
+      ok: true,
+      finalizat: true,
+      scor: a.scor,
+      corecte,
+      greseli: a.greseli,
+      total,
+      motiv: a.motiv,
+      admis: a.admis ?? a.scor > 0,
+      picatLa: a.picatLa ?? total,
+    });
   }
   if (Date.now() > a.expira) {
     await finalizeaza(a, "timp", t);
-    const corecte = a.corecte ?? (a.raspunsuri ?? []).filter((r: any) => r.corect).length;
-    return NextResponse.json({ ok: true, finalizat: true, scor: a.scor, corecte, greseli: a.greseli, total, motiv: "timp" });
+    return NextResponse.json({
+      ok: true,
+      finalizat: true,
+      scor: a.scor,
+      corecte: a.corecte ?? 0,
+      greseli: a.greseli,
+      total,
+      motiv: "timp",
+      admis: a.admis ?? a.scor > 0,
+      picatLa: a.picatLa ?? total,
+    });
   }
 
   const pos = a.index;
@@ -109,7 +133,10 @@ export async function POST(req: Request) {
       scor: 0,
       corecte: a.corecte ?? 0,
       greseli: a.greseli,
+      total: intrebariPentru(a.testId).length,
       motiv: "anticheat",
+      admis: false,
+      picatLa: a.picatLa,
     });
   }
   const ordine = ordineIntrebari(a.testId, a.id);
@@ -117,7 +144,17 @@ export async function POST(req: Request) {
 
   if (Date.now() > a.expira) {
     await finalizeaza(a, "timp", t);
-    return NextResponse.json({ ok: true, terminat: true, scor: a.scor, greseli: a.greseli, motiv: "timp" });
+    return NextResponse.json({
+      ok: true,
+      terminat: true,
+      scor: a.scor,
+      corecte: a.corecte ?? 0,
+      greseli: a.greseli,
+      total,
+      motiv: "timp",
+      admis: a.admis ?? a.scor > 0,
+      picatLa: a.picatLa ?? total,
+    });
   }
 
   const v = body.varianta;
@@ -143,7 +180,10 @@ export async function POST(req: Request) {
       scor: a.scor,
       corecte: a.corecte,
       greseli: a.greseli,
+      total,
       motiv: a.motiv,
+      admis: a.admis,
+      picatLa: a.picatLa,
     });
   }
 

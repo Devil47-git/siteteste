@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
-import { TESTS } from "@/lib/config";
+import { TESTS, GHID_URL, GHID_SECTIUNI, linkGhid } from "@/lib/config";
 import { getJson, K } from "@/lib/store";
 import { gasesteMembruDupaDiscordId, areAccesLaTest } from "@/lib/sheets";
 import Regulament from "./Regulament";
@@ -21,7 +21,15 @@ export default async function Home() {
       if (!a) return { id: t.id, stare: "nou" as const };
       const att = await getJson<any>(K.attempt(a.attemptId));
       if (!att) return { id: t.id, stare: "nou" as const };
-      if (att.finalizat) return { id: t.id, stare: "gata" as const, scor: att.scor };
+      if (att.finalizat) {
+        return {
+          id: t.id,
+          stare: "gata" as const,
+          admis: att.admis ?? att.scor > 0,
+          scor: att.picatLa ?? att.corecte ?? 0,
+          total: att.total ?? null,
+        };
+      }
       if (Date.now() < att.expira) return { id: t.id, stare: "in_curs" as const, attemptId: a.attemptId };
       return { id: t.id, stare: "nou" as const };
     }),
@@ -30,7 +38,7 @@ export default async function Home() {
   const numeAfisat = membru ? membru.nume : user.globalName || user.username;
   const esteConducere = membru ? membru.esteConducere : false;
 
-  return ( 
+  return (
     <main className="wrap">
       {/* Top Profile Bar futuristic */}
       <div className="card profile-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, padding: "20px 24px" }}>
@@ -83,26 +91,44 @@ export default async function Home() {
         {TESTS.map((t) => {
           const s = status.find((x) => x.id === t.id)!;
           const acces = membru ? areAccesLaTest(membru, t.id) : { permis: false, motiv: "Nu ești în departament" };
+          const ghid = GHID_SECTIUNI[t.id];
 
           return (
             <div className={`test-row futuristic-card ${!acces.permis ? "locked" : ""}`} key={t.id}>
               <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   <div className="test-name">{t.nume}</div>
+                  {s.stare === "gata" && (
+                    <span className={`rezultat-istoric ${s.admis ? "admis" : "respins"}`}>
+                      {s.admis ? "ADMIS" : "RESPINS"}
+                      {s.total ? ` · ${s.admis ? `${s.total}/${s.total}` : `${s.scor}/${s.total}`}` : ""}
+                    </span>
+                  )}
                   {!acces.permis && <span className="pill-locked">BLOCAT</span>}
                 </div>
                 {!acces.permis && (
                   <div className="muted lock-reason">{acces.motiv}</div>
+                )}
+                {ghid && (
+                  <a
+                    href={linkGhid(t.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="muted"
+                    style={{ fontSize: 12, display: "inline-block", marginTop: 6 }}
+                  >
+                    📘 Învață: {ghid.label}
+                  </a>
                 )}
               </div>
 
               <div>
                 {s.stare === "in_curs" ? (
                   <Link className="btn btn-continue" href={`/test/${t.id}?a=${s.attemptId}`}>Continuă</Link>
-                ) : s.stare === "gata" ? (
-                  <span className="badge-finished">Finalizat</span>
                 ) : acces.permis ? (
-                  <Link className="btn medical" href={`/cod/${t.id}`}>Solicită cod</Link>
+                  <Link className="btn medical" href={`/cod/${t.id}`}>
+                    {s.stare === "gata" ? "Reluează testul" : "Solicită cod"}
+                  </Link>
                 ) : (
                   <button className="btn ghost" disabled title={acces.motiv}>Restricționat</button>
                 )}
@@ -110,6 +136,31 @@ export default async function Home() {
             </div>
           );
         })}
+      </div>
+
+      {/* Unde inveti - intre solicitarea codului si regulament */}
+      <div className="card ghid-link" style={{ marginTop: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <span style={{ fontSize: 22 }}>📘</span>
+          <h2 style={{ margin: 0, fontSize: 18, color: "#fff" }}>Unde înveți pentru fiecare test</h2>
+        </div>
+        <p className="muted" style={{ fontSize: 14, margin: 0 }}>
+          Toate materiile oficiale sunt în Ghidul Departamentului Medical. Citește secțiunea corespunzătoare
+          testului înainte să îl susții.
+        </p>
+        {TESTS.map((t) => {
+          const ghid = GHID_SECTIUNI[t.id];
+          return (
+            <a key={t.id} href={linkGhid(t.id)} target="_blank" rel="noopener noreferrer">
+              <span>📖 {t.nume} — {ghid ? ghid.label : "Ghidul general"}</span>
+              <span style={{ color: "var(--accent-cyan)" }}>Deschide →</span>
+            </a>
+          );
+        })}
+        <a href={GHID_URL} target="_blank" rel="noopener noreferrer">
+          <span>🏥 Ghidul complet al Departamentului Medical</span>
+          <span style={{ color: "var(--accent-cyan)" }}>Deschide →</span>
+        </a>
       </div>
 
       {/* Regulament obligatoriu */}

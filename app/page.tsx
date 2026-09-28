@@ -30,7 +30,7 @@ export default async function Home() {
   const numeAfisat = membru ? membru.nume : user.globalName || user.username;
   const esteConducere = membru ? membru.esteConducere : false;
 
-  return (
+  return ( 
     <main className="wrap">
       {/* Top Profile Bar futuristic */}
       <div className="card profile-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, padding: "20px 24px" }}>
@@ -99,6 +99,8 @@ export default async function Home() {
               <div>
                 {s.stare === "in_curs" ? (
                   <Link className="btn btn-continue" href={`/test/${t.id}?a=${s.attemptId}`}>Continuă</Link>
+                ) : s.stare === "gata" ? (
+                  <span className="badge-finished">Finalizat</span>
                 ) : acces.permis ? (
                   <Link className="btn medical" href={`/cod/${t.id}`}>Solicită cod</Link>
                 ) : (

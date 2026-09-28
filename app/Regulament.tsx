@@ -16,9 +16,9 @@ export default function Regulament() {
           Poate dura până la un minut să te poți autentifica!
         </p>
         <p>
-          <strong style={{ color: "var(--accent-cyan)" }}>2. Verificați cooldown-ul ⏳</strong><br />
-          După susținerea unui test apare un cooldown: <strong>5 zile</strong> pentru S.M.U.L.S și Rezidentiat,
-          <strong>3 zile</strong> pentru B.L.S și Radio. Poți relua testul doar după ce acesta expiră.
+          <strong style={{ color: "var(--accent-cyan)" }}>2. Poți relua oricând un test</strong><br />
+          Nu există cooldown automat. Poți susține din nou același test oricând, indiferent
+          dacă l-ai trecut sau l-ai picat. Cooldown-ul se pune doar dacă conducerea decide.
         </p>
         <p>
           <strong style={{ color: "var(--accent-cyan)" }}>3. Selectați testul pe care doriți să îl susțineți</strong><br />

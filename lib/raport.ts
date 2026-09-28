@@ -131,14 +131,14 @@ export async function trimiteRaport(
     timestamp: new Date().toISOString(),
   };
 
-  // Trimite catre Conducere (Webhook conducere sau camera 1347936263822376980)
+  // 1. Raportul complet merge in canalul Conducere.
   const canalConducereId = "1347936263822376980";
   const webhookConducere = process.env.DISCORD_WEBHOOK_CONDUCERE;
 
   let trimisConducere = false;
   if (webhookConducere) {
     trimisConducere = await postWebhook("DISCORD_WEBHOOK_CONDUCERE", "", [embedConducere])
-      .then(() => true)
+      .then((r) => r !== null)
       .catch((e) => {
         console.error("Webhook conducere failed:", e);
         return false;

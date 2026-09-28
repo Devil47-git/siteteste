@@ -26,7 +26,8 @@ export default async function Home() {
           id: t.id,
           stare: "gata" as const,
           admis: att.admis ?? att.scor > 0,
-          scor: att.picatLa ?? att.corecte ?? 0,
+          corecte: att.corecte ?? 0,
+          picatLa: att.picatLa ?? null,
           total: att.total ?? null,
         };
       }
@@ -101,7 +102,11 @@ export default async function Home() {
                   {s.stare === "gata" && (
                     <span className={`rezultat-istoric ${s.admis ? "admis" : "respins"}`}>
                       {s.admis ? "ADMIS" : "RESPINS"}
-                      {s.total ? ` · ${s.admis ? `${s.total}/${s.total}` : `${s.scor}/${s.total}`}` : ""}
+                      {s.total
+                        ? ` · ${s.admis
+                          ? `${s.corecte}/${s.total}`
+                          : `${s.picatLa ?? s.corecte}/${s.total}`}`
+                        : ""}
                     </span>
                   )}
                   {!acces.permis && <span className="pill-locked">BLOCAT</span>}

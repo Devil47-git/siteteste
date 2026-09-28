@@ -32,8 +32,8 @@ export default async function LoginPage({
             <path d="M19 10.5h-5.5V5a1.5 1.5 0 0 0-3 0v5.5H5a1.5 1.5 0 0 0 0 3h5.5V19a1.5 1.5 0 0 0 3 0v-5.5H19a1.5 1.5 0 0 0 0-3Z"/>
           </svg>
         </div>
-        <div className="section-subtitle">LOS SANTOS MEDICAL DEPARTMENT</div>
-        <h1 style={{ fontSize: 24, margin: "6px 0 10px" }}>Portal Examinare Teoretică</h1>
+        <div className="section-subtitle">DEPARTMENTUL MEDICAL LOS SANTOS</div>
+        <h1 style={{ fontSize: 24, margin: "6px 0 10px" }}>Site-ul de teste teoretice a departamentului medical.</h1>
         <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
           Autentificarea este securizată și disponibilă exclusiv prin contul Discord asociat departamentului.
         </p>

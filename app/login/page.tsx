@@ -33,7 +33,7 @@ export default async function LoginPage({
           </svg>
         </div>
         <div className="section-subtitle">DEPARTMENTUL MEDICAL LOS SANTOS</div>
-        <h1 style={{ fontSize: 24, margin: "6px 0 10px" }}>Site-ul de teste teoretice a departamentului medical.</h1>
+        <h1 style={{ fontSize: 24, margin: "6px 0 10px" }}>Site-ul de teste teoretice al departamentului medical.</h1>
         <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
           Autentificarea este securizată și disponibilă exclusiv prin contul Discord asociat departamentului.
         </p>

@@ -10,7 +10,6 @@ type Props = {
   attemptId: string;
   numeTest: string;
   greseliPermise: number;
-  cdZile: number;
 };
 
 type Q = {
@@ -38,7 +37,7 @@ function toQ(j: {
   };
 }
 
-export default function TestClient({ attemptId, numeTest, greseliPermise, cdZile }: Props) {
+export default function TestClient({ attemptId, numeTest, greseliPermise }: Props) {
   const router = useRouter();
   const [q, setQ] = useState<Q | null>(null);
   const [ales, setAles] = useState<number | null>(null);
@@ -284,7 +283,7 @@ export default function TestClient({ attemptId, numeTest, greseliPermise, cdZile
             {picat ? "Test nereușit" : "Test susținut cu succes"}
           </h1>
           <p style={{ fontSize: 34, fontWeight: 800, margin: "8px 0 2px" }}>
-            {picat ? `${picatLa} / ${totalIntrebari}` : `${totalIntrebari} / ${totalIntrebari}`}
+            {picat ? `${picatLa} / ${totalIntrebari}` : `${intrebariReusite} / ${totalIntrebari}`}
           </p>
           <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
             {picat ? "Ai picat la întrebarea" : "Întrebări corecte"}
@@ -300,10 +299,10 @@ export default function TestClient({ attemptId, numeTest, greseliPermise, cdZile
             {motiv === "greseli" &&
               `Ai picat la întrebarea ${picatLa} din ${totalIntrebari}. Ai răspuns corect la ${intrebariReusite} întrebări și ai atins ${maxGreseli} greșeli.`}
             {(!motiv || motiv === "final") &&
-              `Ai răspuns corect la toate cele ${totalIntrebari} întrebări. Rezultatul a fost trimis pe Discord.`}
+              `Ai răspuns corect la ${intrebariReusite} din ${totalIntrebari} întrebări. Rezultatul a fost trimis pe Discord.`}
           </p>
           <p className="muted" style={{ fontSize: 13, marginTop: 14 }}>
-            Cooldown de {cdZile} zile înainte de a putea relua testul.
+            Poți susține din nou testul oricând.
           </p>
           <button className="btn" style={{ marginTop: 10 }} onClick={() => router.push("/")}>
             Înapoi la teste

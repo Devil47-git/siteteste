@@ -17,8 +17,9 @@ export default function Regulament() {
         </p>
         <p>
           <strong style={{ color: "var(--accent-cyan)" }}>2. Poți relua oricând un test</strong><br />
-          Nu există cooldown automat. Poți susține din nou același test oricând, indiferent
-          dacă l-ai trecut sau l-ai picat. Cooldown-ul se pune doar dacă conducerea decide.
+          Nu se blochează testul. Poți susține din nou oricând, indiferent dacă l-ai trecut sau l-ai picat.
+          Dacă apare un cooldown pe site, e doar informativ (vine din tabelul Google) și
+          <strong>nu te împiedică</strong> să ceri cod și să dai testul, asta daca l-ai platit sau ti-a expirat.
         </p>
         <p>
           <strong style={{ color: "var(--accent-cyan)" }}>3. Selectați testul pe care doriți să îl susțineți</strong><br />

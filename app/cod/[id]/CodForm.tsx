@@ -60,7 +60,7 @@ export default function CodForm({ test }: { test: TestConfig }) {
           Trimitem o cerere către membrii HR. Unul dintre ei îți va trimite codul în privat, pe Discord.
           <br />
           <span style={{ color: "var(--medical-crimson)", fontWeight: 600 }}>
-            ⚠️ Atenție: Nu contacta membrii HR sau conducerea în privat pentru cod! Dacă dai mesaje în privat la HR sau conducere poți primi sancțiuni / cooldown (CD).
+            ⚠️ Atenție: Nu contacta membrii HR sau conducerea în privat pentru cod! Dacă dai mesaje în privat la HR sau conducere poți primi cooldown (CD).
           </span>
         </p>
         <button className="btn" onClick={cere} disabled={busy || cerut}>

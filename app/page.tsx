@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { TESTS, GHID_URL, GHID_SECTIUNI, linkGhid } from "@/lib/config";
 import { getJson, K } from "@/lib/store";
-import { gasesteMembruDupaDiscordId, areAccesLaTest } from "@/lib/sheets";
+import { gasesteMembruDupaDiscordId, areAccesLaTest, ZILE_CD } from "@/lib/sheets";
 import Regulament from "./Regulament";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +17,13 @@ export default async function Home() {
 
   const status = await Promise.all(
     TESTS.map(async (t) => {
+      // CD din coloana S a Google Sheets (informativ: se afiseaza, dar NU blocheaza testul).
+      const cdSheet = membru?.cooldowns?.[t.id as keyof typeof ZILE_CD];
+      const cdMs = cdSheet ? Math.max(0, cdSheet - Date.now()) : 0;
       const a = await getJson<any>(K.attemptDeUser(user.id, t.id));
-      if (!a) return { id: t.id, stare: "nou" as const };
+      if (!a) return { id: t.id, stare: "nou" as const, cdMs };
       const att = await getJson<any>(K.attempt(a.attemptId));
-      if (!att) return { id: t.id, stare: "nou" as const };
+      if (!att) return { id: t.id, stare: "nou" as const, cdMs };
       if (att.finalizat) {
         return {
           id: t.id,
@@ -29,10 +32,11 @@ export default async function Home() {
           corecte: att.corecte ?? 0,
           picatLa: att.picatLa ?? null,
           total: att.total ?? null,
+          cdMs,
         };
       }
-      if (Date.now() < att.expira) return { id: t.id, stare: "in_curs" as const, attemptId: a.attemptId };
-      return { id: t.id, stare: "nou" as const };
+      if (Date.now() < att.expira) return { id: t.id, stare: "in_curs" as const, attemptId: a.attemptId, cdMs };
+      return { id: t.id, stare: "nou" as const, cdMs };
     }),
   );
 
@@ -124,6 +128,12 @@ export default async function Home() {
                   >
                     📘 Învață: {ghid.label}
                   </a>
+                )}
+                {s.cdMs > 0 && s.stare !== "in_curs" && (
+                  <div className="cd-info" title="Informație din Google Sheets — nu te împiedică să susții testul.">
+                    ⏳ Cooldown (din Docs, până pe {new Date(Date.now() + s.cdMs).toLocaleDateString("ro-RO")})
+                    — poți da testul doar daca acesta ti-a expirat sau l-ai plătit.
+                  </div>
                 )}
               </div>
 

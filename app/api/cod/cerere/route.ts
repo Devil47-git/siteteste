@@ -109,11 +109,6 @@ export async function POST(req: Request) {
               inline: true,
             },
             {
-              name: "Callsign & Grad",
-              value: `**[M-${membru.callsign}]** • ${membru.grad}`,
-              inline: false,
-            },
-            {
               name: "Cod generat",
               value: `\`\`\`${cod}\`\`\``,
               inline: false,

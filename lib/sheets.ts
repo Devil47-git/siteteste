@@ -23,14 +23,75 @@ export const ZILE_CD: Record<TestIdCooldown, number> = {
   bls: 3,
   radio: 3,
 };
+/**
+ * Aliasurile acceptate pentru fiecare test. Ordinea din lista conteaza doar pentru
+ * lizibilitate — fiecare alias este un cuvant intreg, deci nu se suprapun intre ele.
+ */
+const ALIASURI: { re: RegExp; test: TestIdCooldown }[] = [
+  { re: /s\.?\s?m\.?\s?u\.?\s?l\.?\s?s\b|smuls/i, test: "smuls" },
+  { re: /rezidentiat|rezi\b/i, test: "rezidentiat" },
+  { re: /b\.?\s?l\.?\s?s\b|bls/i, test: "bls" },
+  { re: /radio|tet/i, test: "radio" },
+];
+
+/** Numește testul din text, indiferent de majuscule/minuscule, sau null. */
 function testDinText(segment: string): TestIdCooldown | null {
-  const t = segment.toLowerCase();
-  // Ordinea conteaza: "smuls" inainte de "s" generice, "bls" inainte de "ls".
-  if (/\bsmuls\b|smuls|s\.?m\.?u\.?l\.?s/.test(t)) return "smuls";
-  if (/\brezi\b|rezidentiat/.test(t)) return "rezidentiat";
-  if (/\bbls\b/.test(t)) return "bls";
-  if (/\bradio\b|tet/.test(t)) return "radio";
+  for (const { re, test } of ALIASURI) {
+    if (re.test(segment)) return test;
+  }
   return null;
+}
+
+type Token =
+  | { tip: "test"; test: TestIdCooldown }
+  | { tip: "data"; text: string }
+  | { tip: "sanctiune" };
+
+const DATA_SINGURA = /(\d{1,2})\s*[./-]\s*(\d{1,2})(?:\s*[./-]\s*(\d{2,4}))?/;
+
+/** Cuvintele care marcheaza o suspendare / confiscare de certificat. */
+const RE_SANCTIUNE = /suspendat(?:[aoă])?|susp\.?|confiscat(?:[aoă])?|confisc\.|retinut(?:[aoă])?/i;
+
+/**
+ * Imparte celula in tokeni, in ordinea in care apar: sanctiuni, numele testelor
+ * si datele. Separatorii („/”, „-”, spatii, paranteze) sunt ignorati, deci toate
+ * formatele de mai jos dau acelasi rezultat:
+ *   „radio/bls 20.10”   „bls 20.10 / radio 21.10”   „smuls 19.10 / rezi 18.10”
+ *   „SMULS T 19.10”      „Rezi (18.10)”              „SUSPENDAT radio 20.10”
+ */
+function tokenizeaza(text: string): Token[] {
+  const tokenuri: Token[] = [];
+  // Testul apare inaintea datei sale: „test data”. Aliasurile lungi au prioritate
+  // la aceeasi pozitie (ex. „rezidentiat” inainte de „rezi”), iar sufixele de
+  // tip CD („SMULS T”, „SMULS P”) sunt ignorate deoarece ne intereseaza doar
+  // numele testului si data de dupa el.
+  const reTestCurent = new RegExp(
+    `^(?:${ALIASURI.map((a) => a.re.source).join("|")})$`,
+    "i"
+  );
+  const alias = (t: string): TestIdCooldown | null => {
+    for (const { re, test } of ALIASURI) {
+      if (re.test(t)) return test;
+    }
+    return null;
+  };
+  const cursor =
+    /(?<sanctiune>suspendat(?:[aoă])?|susp\.?|confiscat(?:[aoă])?|confisc\.|retinut(?:[aoă])?)|(?<test>\bs\.?\s?m\.?\s?u\.?\s?l\.?\s?s\b|\bsmuls\b|\brezidentiat\b|\brezi\b|\bb\.?\s?l\.?\s?s\b|\bbls\b|\bradio\b|\btet\b)|(?<data>\d{1,2}\s*[./-]\s*\d{1,2}(?:\s*[./-]\s*\d{2,4})?)/gi;
+
+  for (const m of text.matchAll(cursor)) {
+    if (m.groups?.sanctiune) {
+      tokenuri.push({ tip: "sanctiune" });
+    } else if (m.groups?.test) {
+      const t = m.groups.test;
+      if (reTestCurent.test(t)) {
+        const identificat = alias(t);
+        if (identificat) tokenuri.push({ tip: "test", test: identificat });
+      }
+    } else if (m.groups?.data) {
+      tokenuri.push({ tip: "data", text: m.groups.data });
+    }
+  }
+  return tokenuri;
 }
 
 /**
@@ -38,7 +99,7 @@ function testDinText(segment: string): TestIdCooldown | null {
  * Data din coloana S este deja data la care CD-ul expiră, deci nu mai adăugăm zile.
  */
 function dataDinText(segment: string): number | null {
-  const m = segment.match(/(\d{1,2})\s*[./-]\s*(\d{1,2})(?:\s*[./-]\s*(\d{2,4}))?/);
+  const m = segment.match(DATA_SINGURA);
   if (!m) return null;
   const zi = Number(m[1]);
   const luna = Number(m[2]);
@@ -59,36 +120,49 @@ function dataDinText(segment: string): number | null {
 
 /**
  * Parsează coloana S și întoarce data la care expiră cooldownul per test.
- * Colonna e text liber, ex: „ Rezi - ( 29.09 )  /  MOTO - ( 29.09 ) /PILOT 01.10”
- * sau „SMULS P 30.09 /REZIDENTIAT 02.10”.
+ * Colonna e text liber și ordinea nu conteaza, ex:
+ *   „Rezi - ( 29.09 ) / MOTO - ( 29.09 ) / PILOT 01.10”
+ *   „SMULS P 30.09 / REZIDENTIAT 02.10”
+ *   „radio/bls 20.10”          — o singură dată pentru ambele teste
+ *   „bls 20.10 / radio 21.10” — fiecare test cu data lui
+ *   „SUSPENDAT radio 20.10”   — sanctiune: CD pana la data, doar pentru radio
  * Data scrisă este data de EXPIRARE a CD-ului.
- * Segmente sunt separate prin „/”; certificările nerecunoscute sunt ignorate.
+ * Un test fără data este ignorat; certificările nerecunoscute sunt ignorate.
  */
 export function parseCooldownS(continut: string | null | undefined): Partial<Record<TestIdCooldown, number>> {
   const rezultat: Partial<Record<TestIdCooldown, number>> = {};
   if (!continut) return rezultat;
   const text = String(continut);
 
-  // 1) Testele recunoscute in intreaga celula (ordinea si impartirea cu "/" nu conteaza).
-  const gasite: TestIdCooldown[] = [];
-  for (const segment of text.split("/")) {
-    const t = testDinText(segment);
-    if (t && !gasite.includes(t)) gasite.push(t);
-  }
-  if (gasite.length === 0) return rezultat;
+  const tokenuri = tokenizeaza(text);
+  if (!tokenuri.some((tk) => tk.tip === "test")) return rezultat;
 
-  // 2) Toate datele din celula.
-  const dateStr = text.match(/(\d{1,2})\s*[./-]\s*(\d{1,2})(?:\s*[./-]\s*(\d{2,4}))?/g) ?? [];
+  // O data se aplica doar testelor care o preceda si care nu au primit deja alta.
+  // Astfel functioneaza ambele formate:
+  //   „radio/bls 20.10”          — o singura data pentru ambele teste
+  //   „bls 20.10 / radio 21.10” — fiecare test cu data lui
+  //
+  // Un test scris fara data (ex. „radio” singur) este IGNORAT: nu avem de unde sa
+  // stim pana cand expireaza CD-ul, deci nu presupunem nimic.
+  const neasociate = new Set<TestIdCooldown>();
 
-  for (const t of gasite) {
-    // 3) Formatul nu conteaza: "test/test data", "test /test / test data",
-    //    "test data / test data" etc. Ultima data din celula se aplica
-    //    tuturor testelor recunoscute (CD cel mai lung = cel mai restrictiv).
-    const candidat = dateStr[dateStr.length - 1];
-    const data = dataDinText(candidat);
+  for (const tk of tokenuri) {
+    if (tk.tip === "test") {
+      neasociate.add(tk.test);
+      continue;
+    }
+    if (tk.tip === "sanctiune") {
+      // „SUSPENDAT” / „CONFISCAT” nu schimba atribuirea: testul care urmeaza ramane
+      // in asteptarea unei date, exact ca orice alt test. Fara data, nu se blocheaza
+      // nimic pe site (CD-ul exista doar informativ, vezi app/page.tsx).
+      continue;
+    }
+    const data = dataDinText(tk.text);
     if (data === null) continue;
-    rezultat[t] = Math.max(rezultat[t] ?? 0, data);
+    for (const t of neasociate) rezultat[t] = Math.max(rezultat[t] ?? 0, data);
+    neasociate.clear();
   }
+
   return rezultat;
 }
 

@@ -149,7 +149,7 @@ export default async function Home() {
                   </button>
                 ) : acces.permis ? (
                   <Link className="btn medical" href={`/cod/${t.id}`}>
-                    {s.stare === "gata" ? "Reluează testul" : "Solicită cod"}
+                    {s.stare === "gata" ? "Reia testul" : "Solicită cod"}
                   </Link>
                 ) : (
                   <button className="btn ghost" disabled title={acces.motiv}>Restricționat</button>

@@ -95,9 +95,9 @@ function tokenizeaza(text: string): Token[] {
 }
 
 /**
- * Formatarea datelor de cooldown se face in fusul orar al departamentului (Romania),
- * nu in fusul serverului. Pe Vercel serverul ruleaza in UTC, iar un timestamp construit
- * la 23:59:59 local s-ar afișa in Romania cu o zi mai tarziu (ex. 29.09 -> 30.09).
+ * Fusul orar al departamentului. Pe Vercel serverul ruleaza in UTC, iar o data
+ * construita "la 23:59:59 local" ar fi interpretata in Romania cu o zi mai tarziu.
+ * De aceea construim SI afisam datele intotdeauna in acest fus.
  */
 const TZ_DEPARTAMENT = "Europe/Bucharest";
 
@@ -112,20 +112,43 @@ export function formatDataRo(timestamp: number): string {
 }
 
 /**
- * Extrage data de EXPIRARE a cooldownului din segment: „30.09”, „30.09.2026”, „30/09”.
- * Data din coloana S este deja data la care CD-ul expiră, deci nu mai adăugăm zile.
+ * Offsetul fusului Europe/Bucharest fata de UTC, in minute, pentru o data anumita.
+ * Romania alterna intre UTC+2 (iarna) si UTC+3 (vara), deci offsetul trebuie
+ * calculat per data, nu hardcodat.
  *
- * Intoarcem 23:59:59.999 in fusul departamentului, exprimat in UTC, ca serverul
- * (UTC) si browserul (Romania) sa arate aceeasi zi.
+ * Metoda: pornim de la un timestamp UTC si vedem ce ora „se citeste” in Romania.
+ * Diferenta dintre cei doi reprezinta offsetul. Nu folosim toLocaleString cu
+ * round-trip, pentru ca acela ar parsa rezultatul in fusul serverului, nu in
+ * cel cerut, si am obtine mereu offset 0.
  */
-/** Construiește timestampul pentru 23:59:59.999 al zilei (zi/luna/an) din fusul departamentului. */
-function sfarsitDeZiInDepartament(zi: number, luna: number, an: number): number {
+function offsetMinutePentru(zi: number, luna: number, an: number): number {
+  // Mijlocul zilei, ca sa nu prindem grana de la trecerea DST.
+  const baza = Date.UTC(an, luna - 1, zi, 12, 0, 0);
+  const citit = new Date(baza).toLocaleString("en-GB", {
+    timeZone: TZ_DEPARTAMENT,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const [h, min] = citit.split(":").map(Number);
+  // 24:00 apare la miezul noptii in unele locale; il tratam ca 0.
+  const oraLocala = (h % 24) * 60 + min;
+  return oraLocala - 12 * 60;
+}
+
+/**
+ * Construiește timestampul pentru INCEPUTUL zilei (00:00:00.000) din fusul departamentului.
+ *
+ * Folosim inceputul zilei, nu sfarsitul, pentru ca data scrisa in Docs sa fie inclusa:
+ * daca HR a scris „30.09”, CD-ul trebuie sa expire chiar in ziua de 30.09, ca
+ * candidatul sa poata da testul in ziua in care CD-ul expira.
+ */
+function inceputDeZiInDepartament(zi: number, luna: number, an: number): number {
   // Calendarul are 28/29/30/31 de zile; daca ziua nu exista in luna aia, o clampam.
   const zileInLuna = new Date(Date.UTC(an, luna, 0)).getUTCDate();
   const ziClampata = Math.min(Math.max(zi, 1), zileInLuna);
-  // 23:59:59.999 local in Romania = 20:59:59.999 UTC in timpul de vara (UTC+3).
-  const oraLocala = Date.UTC(an, luna - 1, ziClampata, 20, 59, 59, 999);
-  return oraLocala;
+  const offset = offsetMinutePentru(ziClampata, luna, an);
+  return Date.UTC(an, luna - 1, ziClampata) - offset * 60000;
 }
 
 function dataDinText(segment: string): number | null {
@@ -139,15 +162,15 @@ function dataDinText(segment: string): number | null {
   if (m[3] && an < 100) an += 2000;
   if (!m[3]) {
     // Fără an: dacă data ar fi trecută de mai mult de 30 de zile, e anul următor.
-    const candidat = sfarsitDeZiInDepartament(zi, luna, an);
+    const candidat = inceputDeZiInDepartament(zi, luna, an);
     if (candidat < acum.getTime() - 30 * 86400000) an += 1;
   }
-  const d = sfarsitDeZiInDepartament(zi, luna, an);
+  const d = inceputDeZiInDepartament(zi, luna, an);
   return isNaN(d) ? null : d;
 }
 
 /**
- * Parsează coloana S și întoarce data la care expiră cooldownul per test.
+ * Parsează coloana S și întoarce data până la care expiră cooldownul per test.
  * Colonna e text liber și ordinea nu conteaza, ex:
  *   „Rezi - ( 29.09 ) / MOTO - ( 29.09 ) / PILOT 01.10”
  *   „SMULS P 30.09 / REZIDENTIAT 02.10”

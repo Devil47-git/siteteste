@@ -24,7 +24,7 @@ export function linkGhid(testId: string): string {
 export const TESTS = [
   {
     id: "smuls",
-    nume: "Test Teoretic - S.M.U.L.S",
+    nume: "S.M.U.L.S Teoretic",
     descriere: "Testul teoretic pentru S.M.U.L.S",
     timpSecunde: 180,
     greseliPermise: 2,

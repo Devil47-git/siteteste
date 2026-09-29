@@ -51,12 +51,12 @@ body::before {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  filter: blur(26px) saturate(120%);
+  filter: blur(9px) saturate(125%);
   /* Extindem zona cu care depasim ecranul, ca marginea estompata sa nu se vada. */
-  transform: scale(1.08);
+  transform: scale(1.06);
   transform-origin: center;
-  opacity: 0.45;
-  -webkit-filter: blur(26px) saturate(120%);
+  opacity: 0.55;
+  -webkit-filter: blur(9px) saturate(125%);
   pointer-events: none;
 }
 
@@ -370,8 +370,27 @@ a:hover { color: #fff; }
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
+/* Contorul de greseli. La 2/3 (ultima greseala admisa) devine rosu, ca avertisment. */
 .greseli { font-size: 24px; font-weight: 800; color: #fff; }
 .greseli span { font-size: 15px; color: var(--text-muted); font-weight: 600; }
+.greseli.rosu {
+  color: var(--medical-crimson);
+  text-shadow: 0 0 12px var(--medical-glow);
+}
+.greseli.rosu span { color: var(--medical-crimson); }
+
+/* Banner de avertizare afisat cand se atinge limita de greseli. */
+.greseli-avertisment {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 42, 75, 0.45);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 42, 75, 0.12);
+  color: #ff9da1;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
 
 .timp {
   font-size: 28px;

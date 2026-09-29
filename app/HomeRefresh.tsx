@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import SessionHeartbeat from "./SessionHeartbeat";
 
 /**
  * Re-fetches the server-rendered data when the tab regains focus or becomes
@@ -24,5 +25,11 @@ export default function HomeRefresh() {
     };
   }, [router]);
 
-  return null;
+  return (
+    <>
+      {/* Semnalizeaza periodic ca browserul e deschis; sesiunea expira daca nu vine. */}
+      <SessionHeartbeat enabled />
+      {/* Re-randeaza datele de pe pagina cand tab-ul devine activ la loc. */}
+    </>
+  );
 }

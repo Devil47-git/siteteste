@@ -253,6 +253,8 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
   const rosu = ramase !== null && ramase <= PRAG_ROSU;
   // 2 greseli sunt admise, a 3-a pica testul -> afisam x/3
   const maxGreseli = greseliPermise + 1;
+  // La 2/3 (ultima greseala admisa) contorul devine rosu, ca avertisment.
+  const greseliPericuloase = greseli >= greseliPermise && greseli > 0;
 
   if (eroare) {
     return (
@@ -326,7 +328,7 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
       <div className="topbar">
         <div>
           <div className="muted" style={{ fontSize: 13, fontWeight: 600 }}>GREȘELI</div>
-          <div className="greseli" style={{ color: greseli >= greseliPermise ? "var(--bad)" : undefined }}>
+          <div className={`greseli ${greseliPericuloase ? "rosu" : ""}`}>
             {greseli} <span>/ {maxGreseli}</span>
           </div>
         </div>
@@ -335,6 +337,12 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
           <div className={`timp ${rosu ? "rosu" : "normal"}`}>{mm}</div>
         </div>
       </div>
+
+      {greseliPericuloase && (
+        <div className="greseli-avertisment">
+          ⚠️ Ai {greseli} din {maxGreseli} greseli. La urmatoarea greseala testul este picat automat.
+        </div>
+      )}
 
       <div className="card">
         <div className="muted">

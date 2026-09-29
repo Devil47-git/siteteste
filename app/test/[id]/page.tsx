@@ -3,6 +3,7 @@ import { getUser } from "@/lib/auth";
 import { getTest } from "@/lib/config";
 import { getJson, K } from "@/lib/store";
 import TestClient from "./TestClient";
+import SessionHeartbeat from "@/app/SessionHeartbeat";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,9 @@ export default async function PaginaTest({
   if (!link || link.attemptId !== a) redirect(`/cod/${id}`);
 
   return (
-    <TestClient attemptId={a} numeTest={t.nume} greseliPermise={t.greseliPermise} />
+    <>
+      <SessionHeartbeat enabled />
+      <TestClient attemptId={a} numeTest={t.nume} greseliPermise={t.greseliPermise} />
+    </>
   );
 }

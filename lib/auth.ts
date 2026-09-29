@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual, randomBytes } from "node:crypto";
-import { getJson, setJson, K } from "./store";
+import { getJson, setJson, store, K } from "./store";
 import { SESIUNE_ZILE } from "./config";
 
 const SECRET = process.env.SESSION_SECRET ?? "SCHIMBA-SESSION-SECRET-IMPORTANT";
@@ -54,8 +54,28 @@ export function unpackSession(token: string | undefined): { id: string; uid: str
 export async function createSession(user: User) {
   const token = packSession(user);
   const j = unpackSession(token)!;
-  await setJson(K.user(j.id), { ...user, sid: j.id }, SESIUNE_ZILE * 86400);
+  await setJson(K.user(j.id), { ...user, sid: j.id, vazut: Date.now() }, SESIUNE_ZILE * 86400);
   return token;
+}
+
+/**
+ * Sesiunea este valida doar cat timp clientul "semneaza prezenta" (heartbeat).
+ * Daca browserul este inchis, semnalul se opreste, iar dupa SESIUNE_INACTIV_MS
+ * sesiunea expira singura. Astfel nu mai trebuie sa ne bazam pe inchiderea
+ * ferestrei (imposibil de detectat corect din JS: file de tab si schimbarea
+ * de tab declanseaza aceleasi evenimente), iar o persoana eliminata din
+ * LISTA DEPARTAMENT nu mai poate folosi o sesiune ramasa deschisa.
+ */
+export const SESIUNE_INACTIV_MS = 3 * 60 * 1000;
+
+
+/** Inregistreaza activitatea curenta a utilizatorului. */
+export async function marchezeActivitate(sessionId: string) {
+  const u = await getJson<any>(K.user(sessionId));
+  if (!u) return false;
+  u.vazut = Date.now();
+  await setJson(K.user(sessionId), u, SESIUNE_ZILE * 86400);
+  return true;
 }
 
 export async function getUser(): Promise<User | null> {
@@ -64,6 +84,14 @@ export async function getUser(): Promise<User | null> {
   if (!s) return null;
   const u = await getJson<any>(K.user(s.id));
   if (!u) return null;
+
+  // Sesiune expirata prin inactivitate (browser inchis / calculator oprit).
+  const vazut = typeof u.vazut === "number" ? u.vazut : 0;
+  if (!vazut || Date.now() - vazut > SESIUNE_INACTIV_MS) {
+    await store().del(K.user(s.id));
+    return null;
+  }
+
   return {
     id: u.id,
     username: u.username,

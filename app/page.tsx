@@ -18,8 +18,9 @@ export default async function Home() {
 
   const status = await Promise.all(
     TESTS.map(async (t) => {
-      // CD din coloana S a Google Sheets (informativ: se afiseaza, dar NU blocheaza testul).
-      // CD din coloana S a Google Sheets = data la care expiră. Dacă e în viitor, blochează testul.
+      // CD din coloana S a Google Sheets. Data scrisa este data pana la care se poate da testul.
+      // parseCooldownS intoarce INCEPUTUL zilei, deci in ziua scrisă cdMs devine 0
+      // si testul este din nou disponibil (CD-ul expira la sfarsitul zilei respective).
       const cdSheet = membru?.cooldowns?.[t.id as keyof typeof ZILE_CD];
       const cdMs = cdSheet ? Math.max(0, cdSheet - Date.now()) : 0;
       const a = await getJson<any>(K.attemptDeUser(user.id, t.id));
@@ -135,7 +136,7 @@ export default async function Home() {
                 {s.cdMs > 0 && (
                   <div className="cd-info" title="Cooldown înregistrat în Google Sheets (coloana S).">
                     ⏳ Cooldown activ până pe {formatDataRo(Date.now() + s.cdMs)}
-                    {" "}— testul este blocat până când expiră sau este șters de pe Docs.
+                    {" "}— testul este INDISPONIBIL până când CD-ul expiră sau este plătit.
                   </div>
                 )}
               </div>

@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { getTest } from "@/lib/config";
 import CodForm from "./CodForm";
+import SessionHeartbeat from "@/app/SessionHeartbeat";
 
 export const dynamic = "force-dynamic";
 
@@ -12,5 +13,10 @@ export default async function PaginaCod({ params }: { params: Promise<{ id: stri
   const t = getTest(id);
   if (!t) notFound();
 
-  return <CodForm test={{ ...t }} />;
+  return (
+    <>
+      <SessionHeartbeat enabled />
+      <CodForm test={{ ...t }} />
+    </>
+  );
 }

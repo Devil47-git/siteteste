@@ -282,7 +282,7 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
         <div className={`card rezultat ${picat ? "respins" : "admis"}`} style={{ textAlign: "center" }}>
           <div className="rezultat-badge">{picat ? "RESPINS" : "ADMIS"}</div>
           <h1 style={{ margin: "10px 0 4px", color: "#fff" }}>
-            {picat ? "Test nereușit" : "Test susținut cu succes"}
+            {picat ? "Test PICAT" : "Test TRECUT"}
           </h1>
           <p style={{ fontSize: 34, fontWeight: 800, margin: "8px 0 2px" }}>
             {picat ? `${picatLa} / ${totalIntrebari}` : `${intrebariReusite} / ${totalIntrebari}`}
@@ -293,7 +293,7 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
           <p className="muted" style={{ fontSize: 14, lineHeight: 1.6 }}>
             {anticheat && (
               <>
-                Test picat automat: ai părăsit fereastra de examinare / ai dat Alt+Tab.
+                Test picat automat: ai părăsit fereastra de examinare sau ai dat Alt+Tab.
                 {picatLa > 1 && ` Ai răspuns corect la primele ${picatLa - 1} întrebări din ${totalIntrebari}.`}
               </>
             )}
@@ -304,7 +304,7 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
               `Ai răspuns corect la ${intrebariReusite} din ${totalIntrebari} întrebări. Rezultatul a fost trimis pe Discord.`}
           </p>
           <p className="muted" style={{ fontSize: 13, marginTop: 14 }}>
-            Poți susține din nou testul oricând.
+            Poți susține din nou testul, după expirarea cooldownului sau platirea acestuia.
           </p>
           <button className="btn" style={{ marginTop: 10 }} onClick={() => router.push("/")}>
             Înapoi la teste

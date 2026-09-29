@@ -9,13 +9,11 @@ const RULES: { title: string; body: React.ReactNode }[] = [
     body: "Poate dura până la un minut să te poți autentifica!",
   },
   {
-    title: "2. Poți relua oricând un test",
+    title: "2. Verificați dacă aveți cooldown la testul pe care doriți să îl susțineți",
     body: (
       <>
-        Nu se blochează testul. Poți susține din nou oricând, indiferent dacă l-ai trecut sau l-ai picat.
-        Dacă apare un cooldown pe site, e doar informativ (vine din tabelul Google) și
-        <strong style={TITLE_STYLE}>nu te împiedică</strong> să ceri cod și să dai testul, asta daca l-ai platit
-        sau ti-a expirat.
+        Poți susține oricând testul, indiferent dacă l-ai trecut sau l-ai picat. Dacă apare un cooldown pe site, este cel de pe docs și 
+        <strong style={TITLE_STYLE}>nu te împiedică</strong> să ceri cod și să dai testul, <strong style={TITLE_STYLE}>asta daca l-ai platit sau ti-a expirat.</strong>
       </>
     ),
   },
@@ -34,7 +32,7 @@ const RULES: { title: string; body: React.ReactNode }[] = [
   },
   {
     title: "5. Așteptați cu răbdare să primiți codul de la un HR",
-    body: "După trimiterea cererii, un membru HR vă va trimite codul necesar. Nu aveți voie să cereți codul direct de la un HR sau conducere în privat, riscați sancțiuni!",
+    body: "După trimiterea cererii, un membru HR vă va trimite codul necesar. Nu aveți voie să cereți codul direct de la un HR sau un membru al conducerii în privat, riscați sa primiți cooldown la testul respectiv!",
   },
 ];
 
@@ -44,7 +42,7 @@ export default function Regulament() {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
         <span style={{ fontSize: 22 }}>🏥</span>
         <h2 style={{ margin: 0, fontSize: 18, color: "#fff" }}>
-          Regulament Examinare — Departamentul Medical FPlayT
+          Regulament SITE — Departamentul Medical FPlayT
         </h2>
       </div>
 

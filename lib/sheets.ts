@@ -95,27 +95,55 @@ function tokenizeaza(text: string): Token[] {
 }
 
 /**
+ * Formatarea datelor de cooldown se face in fusul orar al departamentului (Romania),
+ * nu in fusul serverului. Pe Vercel serverul ruleaza in UTC, iar un timestamp construit
+ * la 23:59:59 local s-ar afișa in Romania cu o zi mai tarziu (ex. 29.09 -> 30.09).
+ */
+const TZ_DEPARTAMENT = "Europe/Bucharest";
+
+/** Formateaza un timestamp ca data calendaristica „29.09.2026”, in fusul departamentului. */
+export function formatDataRo(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString("ro-RO", {
+    timeZone: TZ_DEPARTAMENT,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+/**
  * Extrage data de EXPIRARE a cooldownului din segment: „30.09”, „30.09.2026”, „30/09”.
  * Data din coloana S este deja data la care CD-ul expiră, deci nu mai adăugăm zile.
+ *
+ * Intoarcem 23:59:59.999 in fusul departamentului, exprimat in UTC, ca serverul
+ * (UTC) si browserul (Romania) sa arate aceeasi zi.
  */
+/** Construiește timestampul pentru 23:59:59.999 al zilei (zi/luna/an) din fusul departamentului. */
+function sfarsitDeZiInDepartament(zi: number, luna: number, an: number): number {
+  // Calendarul are 28/29/30/31 de zile; daca ziua nu exista in luna aia, o clampam.
+  const zileInLuna = new Date(Date.UTC(an, luna, 0)).getUTCDate();
+  const ziClampata = Math.min(Math.max(zi, 1), zileInLuna);
+  // 23:59:59.999 local in Romania = 20:59:59.999 UTC in timpul de vara (UTC+3).
+  const oraLocala = Date.UTC(an, luna - 1, ziClampata, 20, 59, 59, 999);
+  return oraLocala;
+}
+
 function dataDinText(segment: string): number | null {
   const m = segment.match(DATA_SINGURA);
   if (!m) return null;
   const zi = Number(m[1]);
   const luna = Number(m[2]);
-  if (luna < 1 || luna > 12) return null;
+  if (luna < 1 || luna > 12 || zi < 1 || zi > 31) return null;
   const acum = new Date();
   let an = m[3] ? Number(m[3]) : acum.getFullYear();
   if (m[3] && an < 100) an += 2000;
   if (!m[3]) {
     // Fără an: dacă data ar fi trecută de mai mult de 30 de zile, e anul următor.
-    const candidat = new Date(an, luna - 1, zi);
-    candidat.setHours(23, 59, 59, 999);
-    if (candidat.getTime() < acum.getTime() - 30 * 86400000) an += 1;
+    const candidat = sfarsitDeZiInDepartament(zi, luna, an);
+    if (candidat < acum.getTime() - 30 * 86400000) an += 1;
   }
-  const d = new Date(an, luna - 1, zi);
-  d.setHours(23, 59, 59, 999);
-  return isNaN(d.getTime()) ? null : d.getTime();
+  const d = sfarsitDeZiInDepartament(zi, luna, an);
+  return isNaN(d) ? null : d;
 }
 
 /**

@@ -4,7 +4,7 @@ import HomeRefresh from "./HomeRefresh";
 import { getUser } from "@/lib/auth";
 import { TESTS, GHID_URL, GHID_SECTIUNI, linkGhid } from "@/lib/config";
 import { getJson, K } from "@/lib/store";
-import { gasesteMembruDupaDiscordId, areAccesLaTest, ZILE_CD } from "@/lib/sheets";
+import { gasesteMembruDupaDiscordId, areAccesLaTest, ZILE_CD, formatDataRo } from "@/lib/sheets";
 import Regulament from "./Regulament";
 
 export const dynamic = "force-dynamic";
@@ -134,7 +134,7 @@ export default async function Home() {
                 )}
                 {s.cdMs > 0 && (
                   <div className="cd-info" title="Cooldown înregistrat în Google Sheets (coloana S).">
-                    ⏳ Cooldown activ până pe {new Date(Date.now() + s.cdMs).toLocaleDateString("ro-RO")}
+                    ⏳ Cooldown activ până pe {formatDataRo(Date.now() + s.cdMs)}
                     {" "}— testul este blocat până când expiră sau este șters de pe Docs.
                   </div>
                 )}
@@ -144,7 +144,7 @@ export default async function Home() {
                 {s.stare === "in_curs" ? (
                   <Link className="btn btn-continue" href={`/test/${t.id}?a=${s.attemptId}`}>Continuă</Link>
                 ) : s.cdMs > 0 ? (
-                  <button className="btn ghost" disabled title={`Cooldown până pe ${new Date(Date.now() + s.cdMs).toLocaleDateString("ro-RO")}`}>
+                  <button className="btn ghost" disabled title={`Cooldown până pe ${formatDataRo(Date.now() + s.cdMs)}`}>
                     ⏳ În cooldown
                   </button>
                 ) : acces.permis ? (

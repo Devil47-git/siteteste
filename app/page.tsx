@@ -13,14 +13,10 @@ export default async function Home() {
   const user = await getUser();
   if (!user) redirect("/login");
 
-  // Re-validam profilul din Google Sheets pentru a avea datele la zi
   const membru = await gasesteMembruDupaDiscordId(user.id);
 
   const status = await Promise.all(
     TESTS.map(async (t) => {
-      // CD din coloana S a Google Sheets. Data scrisa este data pana la care se poate da testul.
-      // parseCooldownS intoarce INCEPUTUL zilei, deci in ziua scrisă cdMs devine 0
-      // si testul este din nou disponibil (CD-ul expira la sfarsitul zilei respective).
       const cdSheet = membru?.cooldowns?.[t.id as keyof typeof ZILE_CD];
       const cdMs = cdSheet ? Math.max(0, cdSheet - Date.now()) : 0;
       const a = await getJson<any>(K.attemptDeUser(user.id, t.id));

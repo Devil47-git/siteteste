@@ -40,7 +40,13 @@ async function call<T>(
 
 export async function webhook(
   url: string,
-  payload: { content: string; embeds?: unknown[]; components?: unknown[] },
+  payload: {
+    content: string;
+    embeds?: unknown[];
+    components?: unknown[];
+    username?: string;
+    avatar_url?: string;
+  },
 ) {
   const res = await fetch(url, {
     method: "POST",
@@ -55,10 +61,28 @@ export async function webhook(
 }
 
 /** Trimite un mesaj pe un webhook, daca este configurat. */
-export async function postWebhook(envVar: string, content: string, embeds: unknown[] = []) {
+export async function postWebhook(
+  envVar: string,
+  content: string,
+  embeds: unknown[] = [],
+  identity?: { username: string; avatarUrl: string },
+) {
   const url = process.env[envVar];
   if (!url) return null;
-  return webhook(url, embeds.length ? { content, embeds } : { content });
+  const payload = {
+    content,
+    ...(embeds.length ? { embeds } : {}),
+    ...(identity ? { username: identity.username, avatar_url: identity.avatarUrl } : {}),
+  };
+  return webhook(url, payload);
+}
+
+export function getWebhookAvatarUrl() {
+  const appUrl = (process.env.APP_URL ?? "").trim().replace(/\/+$/, "");
+  if (!appUrl) {
+    throw new Error("APP_URL must be configured to set the Discord webhook avatar.");
+  }
+  return new URL("/img/hr-team.png", appUrl).toString();
 }
 
 export async function postMessage(

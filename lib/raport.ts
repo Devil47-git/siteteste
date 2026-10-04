@@ -1,6 +1,6 @@
 import { getTest } from "./config";
 import { intrebariPentru, intrebareLa } from "./intrebari";
-import { postMessage, postWebhook } from "./discord";
+import { getWebhookAvatarUrl, postMessage, postWebhook } from "./discord";
 import { formatMs } from "./format";
 
 /**
@@ -120,7 +120,7 @@ export async function trimiteRaport(
   // 2. EMBED REZULTAT PUBLIC / TESTE (Camera ID: 1347936123950858263)
   const culoarePublic = motiv === "anticheat" ? 0x9b59b6 : picat ? 0xff2a4b : 0x00e676;
   const embedPublic = {
-    title: `Rezultat Test`,
+    title: "Rezultate teste",
     color: culoarePublic,
     fields: [
       { name: "Candidat:", value: `<@${user.id}>`, inline: false },
@@ -168,7 +168,10 @@ export async function trimiteRaport(
   let trimisRezultate = false;
   if (webhookRezultate) {
     // Tag-ul persoanei merge in `content` (deasupra embled-ului), nu in embed.
-    trimisRezultate = await postWebhook("DISCORD_WEBHOOK_REZULTATE", antet, [embedPublic])
+    trimisRezultate = await postWebhook("DISCORD_WEBHOOK_REZULTATE", antet, [embedPublic], {
+      username: "Rezultate teste",
+      avatarUrl: getWebhookAvatarUrl(),
+    })
       .then((r) => r !== null)
       .catch((e) => {
         console.error("Webhook rezultate failed:", e);

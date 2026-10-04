@@ -3,7 +3,7 @@ import { getUser } from "@/lib/auth";
 import { getTest, COD_INTERVAL_SECUNDE } from "@/lib/config";
 import { generateCode, hashCode, COD_TTL_SEC } from "@/lib/cod";
 import { getJson, setJson, store, K } from "@/lib/store";
-import { postMessage, button, container, webhook } from "@/lib/discord";
+import { postMessage, button, container, getWebhookAvatarUrl, webhook } from "@/lib/discord";
 import { gasesteMembruDupaDiscordId, areAccesLaTest } from "@/lib/sheets";
 
 export const dynamic = "force-dynamic";
@@ -91,37 +91,37 @@ export async function POST(req: Request) {
   const roleIdHR = process.env.DISCORD_HR_ROLE_ID || "825071956101169202";
 
   if (webhookUrl) {
-    const webhookPayload = {
-      content: `<@&${roleIdHR}>`,
-      embeds: [
-        {
-          title: `📝 Cerere nouă de test`,
-          color: 0x00d2ff,
-          fields: [
-            {
-              name: "Utilizator",
-              value: `<@${user.id}>\n\`${user.id}\``,
-              inline: true,
-            },
-            {
-              name: "Test",
-              value: `**${t.nume}**`,
-              inline: true,
-            },
-            {
-              name: "Cod generat",
-              value: `\`\`\`${cod}\`\`\``,
-              inline: false,
-            },
-          ],
-          footer: { text: "Departamentul Medical FPlayT" },
-          timestamp: new Date().toISOString(),
-        },
-      ],
-    };
-
     try {
-      await webhook(webhookUrl, webhookPayload);
+      await webhook(webhookUrl, {
+        username: "Solicitare cod",
+        avatar_url: getWebhookAvatarUrl(),
+        content: `<@&${roleIdHR}>`,
+        embeds: [
+          {
+            title: "Solicitare cod",
+            color: 0x00d2ff,
+            fields: [
+              {
+                name: "Utilizator",
+                value: `<@${user.id}>\n\`${user.id}\``,
+                inline: true,
+              },
+              {
+                name: "Test",
+                value: `**${t.nume}**`,
+                inline: true,
+              },
+              {
+                name: "Cod generat",
+                value: `\`\`\`${cod}\`\`\``,
+                inline: false,
+              },
+            ],
+            footer: { text: "Departamentul Medical FPlayT" },
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      });
       await setJson(
         codKey,
         { u: user.id, t: t.id, i: requestId, exp, cod, folosit: false, livrat: true },

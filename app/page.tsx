@@ -9,6 +9,107 @@ import Regulament from "./Regulament";
 
 export const dynamic = "force-dynamic";
 
+type AttemptUserLink = {
+  attemptId: string;
+};
+
+type AttemptRecord = {
+  id: string;
+  userId: string;
+  testId: string;
+  inceput: number;
+  expira: number;
+  greseli: number;
+  index: number;
+  scor?: number;
+  corecte?: number;
+  picatLa?: number;
+  total?: number;
+  finalizat: boolean;
+  admis?: boolean;
+};
+
+type TestStatus = {
+  id: string;
+  stare: "nou" | "gata" | "in_curs";
+  admis?: boolean;
+  corecte?: number;
+  picatLa?: number | null;
+  total?: number | null;
+  attemptId?: string;
+  cdMs: number;
+};
+
+function TestCardItem({
+  test,
+  status,
+  membru,
+}: {
+  test: (typeof TESTS)[number];
+  status: TestStatus;
+  membru: Awaited<ReturnType<typeof gasesteMembruDupaDiscordId>>;
+}) {
+  const acces = membru ? areAccesLaTest(membru, test.id) : { permis: false, motiv: "Nu ești în departament" };
+  const ghid = GHID_SECTIUNI[test.id];
+
+  return (
+    <div className={`test-row futuristic-card ${!acces.permis ? "locked" : ""}`} key={test.id}>
+      <div style={{ flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <div className="test-name">{test.nume}</div>
+          {status.stare === "gata" && (
+            <span className={`rezultat-istoric ${status.admis ? "admis" : "respins"}`}>
+              {status.admis ? "ADMIS" : "RESPINS"}
+              {status.total
+                ? ` · ${status.admis
+                  ? `${status.corecte}/${status.total}`
+                  : `${status.picatLa ?? status.corecte}/${status.total}`}`
+                : ""}
+            </span>
+          )}
+          {!acces.permis && <span className="pill-locked">BLOCAT</span>}
+        </div>
+        {!acces.permis && (
+          <div className="muted lock-reason">{acces.motiv}</div>
+        )}
+        {ghid && (
+          <a
+            href={linkGhid(test.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="muted"
+            style={{ fontSize: 12, display: "inline-block", marginTop: 6 }}
+          >
+            📘 Învață: {ghid.label}
+          </a>
+        )}
+        {status.cdMs > 0 && (
+          <div className="cd-info" title="Cooldown înregistrat în Google Sheets (coloana S).">
+            ⏳ Cooldown activ până pe {formatDataRo(Date.now() + status.cdMs)}
+            {" "}— testul este INDISPONIBIL până când CD-ul expiră sau este plătit.
+          </div>
+        )}
+      </div>
+
+      <div>
+        {status.stare === "in_curs" ? (
+          <Link className="btn btn-continue" href={`/test/${test.id}?a=${status.attemptId}`}>Continuă</Link>
+        ) : status.cdMs > 0 ? (
+          <button className="btn ghost" disabled title={`Cooldown până pe ${formatDataRo(Date.now() + status.cdMs)}`}>
+            ⏳ În cooldown
+          </button>
+        ) : acces.permis ? (
+          <Link className="btn medical" href={`/cod/${test.id}`}>
+            {status.stare === "gata" ? "Reia testul" : "Solicită cod"}
+          </Link>
+        ) : (
+          <button className="btn ghost" disabled title={acces.motiv}>Restricționat</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default async function Home() {
   const user = await getUser();
   if (!user) redirect("/login");
@@ -19,15 +120,15 @@ export default async function Home() {
     TESTS.map(async (t) => {
       const cdSheet = membru?.cooldowns?.[t.id as keyof typeof ZILE_CD];
       const cdMs = cdSheet ? Math.max(0, cdSheet - Date.now()) : 0;
-      const a = await getJson<any>(K.attemptDeUser(user.id, t.id));
+      const a = await getJson<AttemptUserLink>(K.attemptDeUser(user.id, t.id));
       if (!a) return { id: t.id, stare: "nou" as const, cdMs };
-      const att = await getJson<any>(K.attempt(a.attemptId));
+      const att = await getJson<AttemptRecord>(K.attempt(a.attemptId));
       if (!att) return { id: t.id, stare: "nou" as const, cdMs };
       if (att.finalizat) {
         return {
           id: t.id,
           stare: "gata" as const,
-          admis: att.admis ?? att.scor > 0,
+          admis: att.admis ?? ((att.scor ?? 0) > 0),
           corecte: att.corecte ?? 0,
           picatLa: att.picatLa ?? null,
           total: att.total ?? null,
@@ -95,65 +196,7 @@ export default async function Home() {
       <div className="grid two">
         {TESTS.map((t) => {
           const s = status.find((x) => x.id === t.id)!;
-          const acces = membru ? areAccesLaTest(membru, t.id) : { permis: false, motiv: "Nu ești în departament" };
-          const ghid = GHID_SECTIUNI[t.id];
-
-          return (
-            <div className={`test-row futuristic-card ${!acces.permis ? "locked" : ""}`} key={t.id}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <div className="test-name">{t.nume}</div>
-                  {s.stare === "gata" && (
-                    <span className={`rezultat-istoric ${s.admis ? "admis" : "respins"}`}>
-                      {s.admis ? "ADMIS" : "RESPINS"}
-                      {s.total
-                        ? ` · ${s.admis
-                          ? `${s.corecte}/${s.total}`
-                          : `${s.picatLa ?? s.corecte}/${s.total}`}`
-                        : ""}
-                    </span>
-                  )}
-                  {!acces.permis && <span className="pill-locked">BLOCAT</span>}
-                </div>
-                {!acces.permis && (
-                  <div className="muted lock-reason">{acces.motiv}</div>
-                )}
-                {ghid && (
-                  <a
-                    href={linkGhid(t.id)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="muted"
-                    style={{ fontSize: 12, display: "inline-block", marginTop: 6 }}
-                  >
-                    📘 Învață: {ghid.label}
-                  </a>
-                )}
-                {s.cdMs > 0 && (
-                  <div className="cd-info" title="Cooldown înregistrat în Google Sheets (coloana S).">
-                    ⏳ Cooldown activ până pe {formatDataRo(Date.now() + s.cdMs)}
-                    {" "}— testul este INDISPONIBIL până când CD-ul expiră sau este plătit.
-                  </div>
-                )}
-              </div>
-
-              <div>
-                {s.stare === "in_curs" ? (
-                  <Link className="btn btn-continue" href={`/test/${t.id}?a=${s.attemptId}`}>Continuă</Link>
-                ) : s.cdMs > 0 ? (
-                  <button className="btn ghost" disabled title={`Cooldown până pe ${formatDataRo(Date.now() + s.cdMs)}`}>
-                    ⏳ În cooldown
-                  </button>
-                ) : acces.permis ? (
-                  <Link className="btn medical" href={`/cod/${t.id}`}>
-                    {s.stare === "gata" ? "Reia testul" : "Solicită cod"}
-                  </Link>
-                ) : (
-                  <button className="btn ghost" disabled title={acces.motiv}>Restricționat</button>
-                )}
-              </div>
-            </div>
-          );
+          return <TestCardItem key={t.id} test={t} status={s} membru={membru} />;
         })}
       </div>
 

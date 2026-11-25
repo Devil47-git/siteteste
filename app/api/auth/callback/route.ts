@@ -94,8 +94,9 @@ export async function GET(req: Request) {
       maxAge: 7 * 86400,
     });
     return res;
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[OAuth Callback Crash]", err);
-    return redirect(`/login?eroare=server&detalii=${encodeURIComponent(err?.message || "eroare-interna")}`);
+    const mesaj = err instanceof Error ? err.message : "eroare-interna";
+    return redirect(`/login?eroare=server&detalii=${encodeURIComponent(mesaj)}`);
   }
 }

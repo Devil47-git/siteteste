@@ -38,11 +38,17 @@ export function intrebareLa(testId: string, index: number): Intrebare | null {
   return intrebariPentru(testId)[index] ?? null;
 }
 
+/** hash numeric determinist, in [0, 2^32) */
+export function hashInt(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
 /** Shuffle determinist pe baza attemptId, ca reluarea aceleiasi intrebari sa difere. */
 export function shuffleDeterministic<T>(arr: T[], seed: string): T[] {
   const out = [...arr];
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  let h = hashInt(seed);
   const rnd = () => {
     h ^= h << 13;
     h >>>= 0;
@@ -79,13 +85,6 @@ export function optiuniAmestecate(
   const p = permutare(testId, index, attemptId);
   if (!p) return null;
   return { optiuni: p.elemente.map((e) => e.text), indexCorect: p.pozCorect };
-}
-
-/** hash numeric determinist, in [0, 2^32) */
-function hashInt(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h;
 }
 
 /** Permutarea optiunilor unei intrebari, pastrand indicii originali. */

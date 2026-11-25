@@ -35,17 +35,13 @@ export default function LogoutOnClose() {
     };
 
     const onUnload = () => {
-      if (document.visibilityState === "hidden") trimite();
+      trimite();
     };
 
-    // evenimentul firesc la inchiderea paginii (desktop)
+    // evenimentul firesc la inchiderea paginii / navigare departe de aplicatie
     window.addEventListener("pagehide", onUnload);
-    // backup: pe mobil nu se apara "pagehide", se foloseste visibilitychange
-    document.addEventListener("visibilitychange", onUnload);
 
-    // Backup suplimentar: detectam file-ul conexiunii (inchidere fortata / crash).
-    // Nu putem face request la inchidere, dar putem la revenirea in fereastra,
-    // ca sa inchidem sesiunea care a ramas deschisa in server.
+    // Backup suplimentar: detectam revenirea online
     const onOnline = () => {
       if (trimisRef.current) return;
     };
@@ -54,7 +50,6 @@ export default function LogoutOnClose() {
 
     return () => {
       window.removeEventListener("pagehide", onUnload);
-      document.removeEventListener("visibilitychange", onUnload);
       window.removeEventListener("online", onOnline);
     };
   }, []);

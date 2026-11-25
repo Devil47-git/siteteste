@@ -224,6 +224,89 @@ const SHEET_GID = "288034789";
 let cacheMembri: { timestamp: number; data: Map<string, MembruMedical> } | null = null;
 const CACHE_TTL_MS = 60 * 1000; // 1 minut cache
 
+function calculeazaPermisiuniTeste(callsignNum: number) {
+  let poateSMULS = true;
+  let poateRezidentiat = true;
+  let poateBLS = true;
+  let poateRadio = true;
+
+  if (callsignNum >= 600 && callsignNum < 700) {
+    poateBLS = true;
+    poateRadio = true;
+    poateSMULS = false;
+    poateRezidentiat = false;
+  } else if (callsignNum >= 400 && callsignNum < 500) {
+    poateBLS = true;
+    poateRadio = true;
+    poateSMULS = true;
+    poateRezidentiat = false;
+  } else if (callsignNum >= 500 && callsignNum < 600) {
+    // Cazul 500 (asimilabil 600/400, permisiune standard fara rezidentiat)
+    poateBLS = true;
+    poateRadio = true;
+    poateSMULS = true;
+    poateRezidentiat = false;
+  } else {
+    // 300+, 200+, 100+, conducere: orice test
+    poateBLS = true;
+    poateRadio = true;
+    poateSMULS = true;
+    poateRezidentiat = true;
+  }
+
+  return { poateSMULS, poateRezidentiat, poateBLS, poateRadio };
+}
+
+function parseazaRandMembru(c: any[]): { discordId: string; membru: MembruMedical } | null {
+  // c[2] = NR. INSIGNA (Callsign) (Coloana C)
+  // c[3] = NUME (Coloana D)
+  // c[4] = RANK / Grad (Coloana E)
+  // c[19] = Discord ID (Coloana T)
+  const callsignRaw = c[2]?.v !== null && c[2]?.v !== undefined ? String(c[2]?.v).trim() : "";
+  const numeRaw = c[3]?.v !== null && c[3]?.v !== undefined ? String(c[3]?.v).trim() : "";
+  const gradRaw = c[4]?.v !== null && c[4]?.v !== undefined ? String(c[4]?.v).trim() : "";
+  const cdRaw = c[18]?.v !== null && c[18]?.v !== undefined ? String(c[18]?.v).trim() : "";
+  const discordIdRaw = c[19]?.v !== null && c[19]?.v !== undefined ? String(c[19]?.v).trim() : "";
+
+  if (!discordIdRaw) return null;
+
+  // Curatam discord ID de posibile spatii sau virgule
+  const discordId = discordIdRaw.replace(/[^0-9]/g, "");
+  if (!discordId) return null;
+
+  const callsign = callsignRaw || "000";
+  const nume = numeRaw || "Necunoscut";
+  const grad = gradRaw || "Membru";
+
+  // Extragem numarul de grad / callsign (ex: "601" -> 601, "001" -> 1)
+  const callsignNum = parseInt(callsign.replace(/[^0-9]/g, ""), 10) || 999;
+  const permisiuni = calculeazaPermisiuniTeste(callsignNum);
+
+  // Conducere: Medic Chirurg, Medic Inspector, Director Adjunct, Director General
+  const gradUpper = grad.toUpperCase();
+  const esteConducere =
+    gradUpper.includes("CHIRURG") ||
+    gradUpper.includes("INSPECTOR") ||
+    gradUpper.includes("DIRECTOR") ||
+    callsignNum < 100;
+
+  const eticheta = `[M-${callsign}] ${nume}, ${grad}`;
+
+  return {
+    discordId,
+    membru: {
+      callsign,
+      nume,
+      grad,
+      eticheta,
+      numarGrad: callsignNum,
+      esteConducere,
+      ...permisiuni,
+      cooldowns: parseCooldownS(cdRaw),
+    },
+  };
+}
+
 export async function preiaMembriDinSheet(): Promise<Map<string, MembruMedical>> {
   if (cacheMembri && Date.now() - cacheMembri.timestamp < CACHE_TTL_MS) {
     return cacheMembri.data;
@@ -253,85 +336,10 @@ export async function preiaMembriDinSheet(): Promise<Map<string, MembruMedical>>
       const c = r?.c;
       if (!c || !Array.isArray(c)) continue;
 
-      // c[2] = NR. INSIGNA (Callsign) (Coloana C)
-      // c[3] = NUME (Coloana D)
-      // c[4] = RANK / Grad (Coloana E)
-      // c[19] = Discord ID (Coloana T)
-      const callsignRaw = c[2]?.v !== null && c[2]?.v !== undefined ? String(c[2]?.v).trim() : "";
-      const numeRaw = c[3]?.v !== null && c[3]?.v !== undefined ? String(c[3]?.v).trim() : "";
-      const gradRaw = c[4]?.v !== null && c[4]?.v !== undefined ? String(c[4]?.v).trim() : "";
-      const cdRaw = c[18]?.v !== null && c[18]?.v !== undefined ? String(c[18]?.v).trim() : "";
-      const discordIdRaw = c[19]?.v !== null && c[19]?.v !== undefined ? String(c[19]?.v).trim() : "";
-
-      if (!discordIdRaw) continue;
-
-      // Curatam discord ID de posibile spatii sau virgule
-      const discordId = discordIdRaw.replace(/[^0-9]/g, "");
-      if (!discordId) continue;
-
-      const callsign = callsignRaw || "000";
-      const nume = numeRaw || "Necunoscut";
-      const grad = gradRaw || "Membru";
-
-      // Extragem numarul de grad / callsign (ex: "601" -> 601, "001" -> 1)
-      const callsignNum = parseInt(callsign.replace(/[^0-9]/g, ""), 10) || 999;
-
-      // Reguli cerute de acces teste:
-      // - Daca e 600 (ex: 600 - 699): doar BLS + Radio
-      // - Daca e 400 (ex: 400 - 499): tot inafara de rezidentiat (adica SMULS, BLS, Radio)
-      // - Daca e 300+ (sau grade superioare / directie ex: 300-399, 200, 100, 001-099): orice test
-      let poateSMULS = true;
-      let poateRezidentiat = true;
-      let poateBLS = true;
-      let poateRadio = true;
-
-      if (callsignNum >= 600 && callsignNum < 700) {
-        poateBLS = true;
-        poateRadio = true;
-        poateSMULS = false;
-        poateRezidentiat = false;
-      } else if (callsignNum >= 400 && callsignNum < 500) {
-        poateBLS = true;
-        poateRadio = true;
-        poateSMULS = true;
-        poateRezidentiat = false;
-      } else if (callsignNum >= 500 && callsignNum < 600) {
-        // Cazul 500 (asimilabil 600/400, permisiune standard fara rezidentiat)
-        poateBLS = true;
-        poateRadio = true;
-        poateSMULS = true;
-        poateRezidentiat = false;
-      } else {
-        // 300+, 200+, 100+, conducere: orice test
-        poateBLS = true;
-        poateRadio = true;
-        poateSMULS = true;
-        poateRezidentiat = true;
+      const extras = parseazaRandMembru(c);
+      if (extras) {
+        mapa.set(extras.discordId, extras.membru);
       }
-
-      // Conducere: Medic Chirurg, Medic Inspector, Director Adjunct, Director General
-      const gradUpper = grad.toUpperCase();
-      const esteConducere =
-        gradUpper.includes("CHIRURG") ||
-        gradUpper.includes("INSPECTOR") ||
-        gradUpper.includes("DIRECTOR") ||
-        callsignNum < 100;
-
-      const eticheta = `[M-${callsign}] ${nume}, ${grad}`;
-
-      mapa.set(discordId, {
-        callsign,
-        nume,
-        grad,
-        eticheta,
-        numarGrad: callsignNum,
-        esteConducere,
-        poateSMULS,
-        poateRezidentiat,
-        poateBLS,
-        poateRadio,
-        cooldowns: parseCooldownS(cdRaw),
-      });
     }
 
     cacheMembri = { timestamp: Date.now(), data: mapa };

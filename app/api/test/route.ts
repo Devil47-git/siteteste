@@ -26,14 +26,22 @@ async function finalizeaza(a: any, motiv: string, t: any, picatFortat = false) {
   a.admis = !picat;
   a.scor = picat ? 0 : Math.max(0, total - a.greseli);
   // Intrebarea la care s-a picat (1-based). Daca nu s-a picat, se considera ultima intrebare.
-  a.picatLa = picat ? Math.min(total, Math.max(1, a.raspunsuri?.length ?? 1)) : total;
+  a.picatLa = picat ? Math.min(total, Math.max(1, (a.raspunsuri?.length ?? 0) + (motiv === "greseli" ? 0 : 1))) : total;
   await setJson(K.attempt(a.id), a, 3600);
 
   if (!a.raportTrimis) {
-    a.raportTrimis = true;
-    await setJson(K.attempt(a.id), a, 3600);
-    const u = await getUser();
-    if (u) await trimiteRaport(u, a, a.motiv);
+    try {
+      const u = (await getUser()) ?? a.userSnapshot;
+      if (u) {
+        const trimis = await trimiteRaport(u, a, a.motiv);
+        if (trimis) {
+          a.raportTrimis = true;
+          await setJson(K.attempt(a.id), a, 3600);
+        }
+      }
+    } catch (err) {
+      console.error("[finalizeaza] Eroare la trimiterea raportului:", err);
+    }
   }
   return a;
 }
@@ -116,7 +124,12 @@ export async function POST(req: Request) {
   const user = await getUser();
   if (!user) return NextResponse.json({ ok: false, mesaj: "Neautentificat." }, { status: 401 });
 
-  const body = (await req.json().catch(() => ({}))) as { a?: string; varianta?: number; anticheat?: boolean };
+  const body = (await req.json().catch(() => ({}))) as {
+    a?: string;
+    varianta?: number;
+    anticheat?: boolean;
+    timeout?: boolean;
+  };
   const a = await load(body.a ?? null, user.id);
   if (!a) return NextResponse.json({ ok: false, mesaj: "Sesiune de test inexistentă." }, { status: 404 });
   if (a.finalizat) return NextResponse.json({ ok: false, mesaj: "Test deja finalizat." }, { status: 400 });
@@ -141,10 +154,9 @@ export async function POST(req: Request) {
       picatLa: a.picatLa,
     });
   }
-  const ordine = ordineIntrebari(a.testId, a.id);
-  const total = intrebariPentru(a.testId).length;
 
-  if (Date.now() > a.expira) {
+  // TIMEOUT TRIGGER: Daca a expirat timpul sau clientul semnaleaza timeout
+  if (body.timeout || Date.now() > a.expira) {
     await finalizeaza(a, "timp", t);
     return NextResponse.json({
       ok: true,
@@ -152,12 +164,15 @@ export async function POST(req: Request) {
       scor: a.scor,
       corecte: a.corecte ?? 0,
       greseli: a.greseli,
-      total,
+      total: intrebariPentru(a.testId).length,
       motiv: "timp",
-      admis: a.admis ?? a.scor > 0,
-      picatLa: a.picatLa ?? total,
+      admis: false,
+      picatLa: a.picatLa ?? intrebariPentru(a.testId).length,
     });
   }
+
+  const ordine = ordineIntrebari(a.testId, a.id);
+  const total = intrebariPentru(a.testId).length;
 
   const v = body.varianta;
   if (typeof v !== "number" || v < 0) {
@@ -196,6 +211,19 @@ export async function POST(req: Request) {
   a.ultimaActiune = Date.now();
   await setJson(K.attempt(a.id), a, t.timpSecunde + 3600);
 
+  const urmatorPos = a.index;
+  const idxBancUrmator = ordine[urmatorPos];
+  const amestecate = optiuniAmestecate(a.testId, idxBancUrmator, a.id);
+  const urmatoareaIntrebare = amestecate
+    ? {
+        intrebare: intrebariPentru(a.testId)[idxBancUrmator].intrebare,
+        optiuni: amestecate.optiuni,
+        index: idxBancUrmator,
+        pozitie: urmatorPos,
+        total,
+      }
+    : null;
+
   return NextResponse.json({
     ok: true,
     corect,
@@ -203,5 +231,7 @@ export async function POST(req: Request) {
     urmator: a.index,
     greseli: a.greseli,
     total,
+    ramase: Math.max(0, Math.floor((a.expira - Date.now()) / 1000)),
+    urmatoareaIntrebare,
   });
 }

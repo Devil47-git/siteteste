@@ -16,6 +16,21 @@ type Interaction = {
   token: string;
 };
 
+export type StoredCode = {
+  u: string;
+  t: string;
+  i: string;
+  exp: number;
+  cod: string;
+  folosit: boolean;
+  livrat: boolean;
+};
+
+export type StoredHRContext = {
+  channel: string;
+  message: string;
+};
+
 export async function POST(req: Request) {
   const body = await req.text();
 
@@ -38,13 +53,13 @@ export async function POST(req: Request) {
   }
 
   const [actiune, hash] = p.data.custom_id.split(":");
-  const rec = await getJson<any>(K.cod(hash));
+  const rec = await getJson<StoredCode>(K.cod(hash));
   if (!rec) {
     return ephemeral("Cererea a expirat.");
   }
   const t = getTest(rec.t);
   if (!t) return ephemeral("Testul nu mai există în configurație.");
-  const hr = await getJson<any>(`hr:${hash}`);
+  const hr = await getJson<StoredHRContext>(`hr:${hash}`);
 
   // doar membrii cu rolul configurat pot apasa butoanele
   const id = p.member?.user.id ?? p.user?.id;

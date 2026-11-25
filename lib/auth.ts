@@ -27,6 +27,11 @@ export type User = {
   } | null;
 };
 
+export type SessionRecord = User & {
+  sid: string;
+  vazut: number;
+};
+
 function sign(v: string) {
   return createHmac("sha256", SECRET).update(v).digest("base64url").slice(0, 32);
 }
@@ -66,12 +71,12 @@ export async function createSession(user: User) {
  * de tab declanseaza aceleasi evenimente), iar o persoana eliminata din
  * LISTA DEPARTAMENT nu mai poate folosi o sesiune ramasa deschisa.
  */
-export const SESIUNE_INACTIV_MS = 3 * 60 * 1000;
+export const SESIUNE_INACTIV_MS = 30 * 60 * 1000;
 
 
 /** Inregistreaza activitatea curenta a utilizatorului. */
 export async function marchezeActivitate(sessionId: string) {
-  const u = await getJson<any>(K.user(sessionId));
+  const u = await getJson<SessionRecord>(K.user(sessionId));
   if (!u) return false;
   u.vazut = Date.now();
   await setJson(K.user(sessionId), u, SESIUNE_ZILE * 86400);
@@ -82,7 +87,7 @@ export async function getUser(): Promise<User | null> {
   const jar = await cookies();
   const s = unpackSession(jar.get(COOKIE)?.value);
   if (!s) return null;
-  const u = await getJson<any>(K.user(s.id));
+  const u = await getJson<SessionRecord>(K.user(s.id));
   if (!u) return null;
 
   // Sesiune expirata prin inactivitate (browser inchis / calculator oprit).
@@ -90,6 +95,12 @@ export async function getUser(): Promise<User | null> {
   if (!vazut || Date.now() - vazut > SESIUNE_INACTIV_MS) {
     await store().del(K.user(s.id));
     return null;
+  }
+
+  // Prelungim activitatea utilizatorului daca au trecut mai mult de 30s de la ultima inregistrare
+  if (Date.now() - vazut > 30 * 1000) {
+    u.vazut = Date.now();
+    await setJson(K.user(s.id), u, SESIUNE_ZILE * 86400).catch(() => {});
   }
 
   return {

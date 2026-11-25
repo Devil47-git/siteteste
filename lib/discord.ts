@@ -65,24 +65,31 @@ export async function postWebhook(
   envVar: string,
   content: string,
   embeds: unknown[] = [],
-  identity?: { username: string; avatarUrl: string },
+  identity?: { username: string; avatarUrl?: string },
 ) {
   const url = process.env[envVar];
   if (!url) return null;
   const payload = {
     content,
     ...(embeds.length ? { embeds } : {}),
-    ...(identity ? { username: identity.username, avatar_url: identity.avatarUrl } : {}),
+    ...(identity
+      ? {
+          username: identity.username,
+          ...(identity.avatarUrl ? { avatar_url: identity.avatarUrl } : {}),
+        }
+      : {}),
   };
   return webhook(url, payload);
 }
 
-export function getWebhookAvatarUrl() {
+export function getWebhookAvatarUrl(): string | undefined {
   const appUrl = (process.env.APP_URL ?? "").trim().replace(/\/+$/, "");
-  if (!appUrl) {
-    throw new Error("APP_URL must be configured to set the Discord webhook avatar.");
+  if (!appUrl) return undefined;
+  try {
+    return new URL("/img/hr-team.png", appUrl).toString();
+  } catch {
+    return undefined;
   }
-  return new URL("/img/hr-team.png", appUrl).toString();
 }
 
 export async function postMessage(
@@ -117,7 +124,7 @@ export async function getGuildMember(guildId: string, userId: string) {
 export function avatarUrl(user: { id: string; avatar?: string | null }) {
   return user.avatar
     ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
-    : `https://cdn.discordapp.com/embed/avatars/${Number(user.id) >> 22 % 6}.png`;
+    : `https://cdn.discordapp.com/embed/avatars/${(Number(user.id) >> 22) % 6}.png`;
 }
 
 export function button(customId: string, label: string, style = 2, disabled = false) {

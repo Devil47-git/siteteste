@@ -27,9 +27,10 @@ export async function trimiteRaport(
   user: { id: string; username: string; globalName: string; membru?: any },
   attempt: any,
   motiv: string,
-) {
-  const t = getTest(attempt.testId);
-  if (!t) return;
+): Promise<boolean> {
+  try {
+    const t = getTest(attempt.testId);
+    if (!t) return false;
 
   const total = intrebariPentru(attempt.testId).length;
   const greseli = attempt.greseli ?? 0;
@@ -178,9 +179,15 @@ export async function trimiteRaport(
         return false;
       });
   }
-  if (!trimisRezultate && process.env.DISCORD_BOT_TOKEN) {
-    await postMessage(canalRezultateId, antet, [embedPublic]).catch((e) =>
-      console.error("Bot post to Rezultate failed:", e)
-    );
+    if (!trimisRezultate && process.env.DISCORD_BOT_TOKEN) {
+      await postMessage(canalRezultateId, antet, [embedPublic]).catch((e) =>
+        console.error("Bot post to Rezultate failed:", e)
+      );
+    }
+
+    return true;
+  } catch (err) {
+    console.error("[raport] Eroare generala la trimiterea raportului:", err);
+    return false;
   }
 }

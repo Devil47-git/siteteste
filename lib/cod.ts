@@ -19,7 +19,11 @@ export type CodRecord = {
 };
 
 export function normalize(cod: string) {
-  return cod.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return cod
+    .toUpperCase()
+    .replace(/[\u200B-\u200D\uFEFF]/g, "") // elimina zero-width spaces
+    .replace(/[`"'“”‘’\s]/g, "") // elimina backticks, ghilimele si spatii
+    .replace(/[^A-Z0-9]/g, ""); // pastreaza doar litere si cifre
 }
 
 export function hashCode(cod: string) {
@@ -46,4 +50,4 @@ export function safeEqual(a: string, b: string) {
   return timingSafeEqual(ba, bb);
 }
 
-export const COD_TTL_SEC = 15 * 60; // 15 minute de la generare
+export const COD_TTL_SEC = 2 * 60 * 60; // 2 ore de la generare (timp suficient pentru raspunsul HR pe Discord)

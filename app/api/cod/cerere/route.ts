@@ -63,26 +63,12 @@ export async function POST(req: Request) {
   const canal = process.env.DISCORD_HR_CHANNEL_ID;
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
-  // Daca nu exista canal sau bot activ, dar exista webhook, marcam codul ca direct livrat
-  // (cand HR primeste codul prin webhook, candidatul il poate introduce)
-  const livratDirect = !botToken || !canal;
-
   await setJson(
     codKey,
-    { u: user.id, t: t.id, i: requestId, exp, cod, folosit: false, livrat: livratDirect },
+    { u: user.id, t: t.id, i: requestId, exp, cod, folosit: false, livrat: true },
     COD_TTL_SEC,
   );
   await setJson(codUserKey, { hash }, COD_TTL_SEC);
-
-  const numeAfisat = membru.eticheta;
-
-  const mesajBot =
-    `**Cerere de cod — ${t.nume}**\n` +
-    `Candidat: ${numeAfisat} (<@${user.id}>)\n` +
-    `Grad: **${membru.grad}** | Callsign: **[M-${membru.callsign}]**\n` +
-    `Test: \`${t.id}\`\n` +
-    `Cerere: \`${requestId.slice(0, 8)}\`\n` +
-    `Expiră: <t:${Math.floor(exp / 1000)}:R>`;
 
   let trimis = false;
   let detaliiEroare = "";
@@ -122,11 +108,6 @@ export async function POST(req: Request) {
           },
         ],
       });
-      await setJson(
-        codKey,
-        { u: user.id, t: t.id, i: requestId, exp, cod, folosit: false, livrat: true },
-        COD_TTL_SEC,
-      );
       trimis = true;
     } catch (e: any) {
       detaliiEroare = `webhook: ${e?.message || e}`;

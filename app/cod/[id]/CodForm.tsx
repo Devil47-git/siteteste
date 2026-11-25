@@ -12,35 +12,68 @@ export default function CodForm({ test }: { test: TestConfig }) {
   const [mesaj, setMesaj] = useState<{ tip: "ok" | "err"; text: string } | null>(null);
   const [cerut, setCerut] = useState(false);
 
+  function handleCodChange(val: string) {
+    // Curatam caractere nedorite (backticks de la Discord, spatii, ghilimele)
+    const curatat = val
+      .toUpperCase()
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .replace(/[`"'“”‘’\s]/g, "")
+      .replace(/[^A-Z0-9]/g, "");
+
+    // Pastram maxim 8 caractere alfanumerice si adaugam cratima automat
+    const doarCaractere = curatat.slice(0, 8);
+    const formatat =
+      doarCaractere.length > 4
+        ? `${doarCaractere.slice(0, 4)}-${doarCaractere.slice(4)}`
+        : doarCaractere;
+
+    setCod(formatat);
+  }
+
   async function cere() {
     setBusy(true);
     setMesaj(null);
-    const r = await fetch("/api/cod/cerere", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ test: test.id }),
-    });
-    const j = await r.json();
-    setBusy(false);
-    setMesaj({ tip: j.ok ? "ok" : "err", text: j.mesaj });
-    if (j.ok) setCerut(true);
+    try {
+      const r = await fetch("/api/cod/cerere", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ test: test.id }),
+      });
+      const j = await r.json().catch(() => null);
+      if (j) {
+        setMesaj({ tip: j.ok ? "ok" : "err", text: j.mesaj });
+        if (j.ok) setCerut(true);
+      } else {
+        setMesaj({ tip: "err", text: "Eroare la trimiterea cererii. Te rugăm să reîncerci." });
+      }
+    } catch {
+      setMesaj({ tip: "err", text: "Eroare de conexiune. Verifică conexiunea la internet și reîncearcă." });
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function valideaza() {
+    if (busy) return;
     setBusy(true);
     setMesaj(null);
-    const r = await fetch("/api/cod/valideaza", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cod, test: test.id }),
-    });
-    const j = await r.json();
-    if (!j.ok) {
+    try {
+      const r = await fetch("/api/cod/valideaza", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cod, test: test.id }),
+      });
+      const j = await r.json().catch(() => null);
+      if (!j?.ok) {
+        setMesaj({ tip: "err", text: j?.mesaj || "Codul nu a putut fi validat." });
+        return;
+      }
+      router.push(`/test/${test.id}?a=${j.attemptId}`);
+    } catch {
+      setMesaj({ tip: "err", text: "Eroare de conexiune. Te rugăm să reîncerci." });
+    } finally {
       setBusy(false);
-      setMesaj({ tip: "err", text: j.mesaj });
-      return;
     }
-    router.push(`/test/${test.id}?a=${j.attemptId}`);
   }
 
   return (
@@ -74,15 +107,17 @@ export default function CodForm({ test }: { test: TestConfig }) {
           className="cod"
           placeholder="XXXX-XXXX"
           value={cod}
-          maxLength={9}
-          onChange={(e) => setCod(e.target.value.toUpperCase())}
-          onKeyDown={(e) => e.key === "Enter" && valideaza()}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          onChange={(e) => handleCodChange(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && cod.replace(/[^A-Z0-9]/g, "").length === 8 && valideaza()}
         />
         <button
           className="btn"
           style={{ marginTop: 12, width: "100%", justifyContent: "center" }}
           onClick={valideaza}
-          disabled={busy || cod.length < 8}
+          disabled={busy || cod.replace(/[^A-Z0-9]/g, "").length !== 8}
         >
           {busy ? "Se verifică…" : "Începe testul"}
         </button>

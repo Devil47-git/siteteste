@@ -2,6 +2,7 @@ import { getTest } from "./config";
 import { intrebariPentru, intrebareLa } from "./intrebari";
 import { getWebhookAvatarUrl, postMessage, postWebhook } from "./discord";
 import { formatMs } from "./format";
+import { calculeazaDataCooldown } from "./sheets";
 
 /**
  * ID-urile rolurilor Discord pentru fiecare grad, citite din env:
@@ -52,12 +53,8 @@ export async function trimiteRaport(
   const tagCandidat = rolId ? `<@&${rolId}> ` : "";
   const antet = `${tagCandidat}<@${user.id}>`;
 
-  // Cooldown calculat per test (S.M.U.L.S/Rezidentiat: 5 zile, B.L.S/Radio: 3 zile)
-  const d = new Date(Date.now() + (t.cdZile ?? 3) * 24 * 3600 * 1000);
-  const zi = String(d.getDate()).padStart(2, "0");
-  const luna = String(d.getMonth() + 1).padStart(2, "0");
-  const an = d.getFullYear();
-  const cooldownData = `${zi}.${luna}.${an}`;
+  // Cooldown calculat per test (S.M.U.L.S/Rezidentiat: 5 zile, B.L.S/Radio: 3 zile) in fusul departamentului
+  const cooldownData = calculeazaDataCooldown(t.cdZile ?? 3, attempt.ultimaActiune ?? Date.now());
 
   let rezultatConducere = "";
   let rezultatPublic = "";

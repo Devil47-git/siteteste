@@ -99,7 +99,7 @@ function tokenizeaza(text: string): Token[] {
  * construita "la 23:59:59 local" ar fi interpretata in Romania cu o zi mai tarziu.
  * De aceea construim SI afisam datele intotdeauna in acest fus.
  */
-const TZ_DEPARTAMENT = "Europe/Bucharest";
+export const TZ_DEPARTAMENT = "Europe/Bucharest";
 
 /** Formateaza un timestamp ca data calendaristica „29.09.2026”, in fusul departamentului. */
 export function formatDataRo(timestamp: number): string {
@@ -109,6 +109,32 @@ export function formatDataRo(timestamp: number): string {
     month: "2-digit",
     year: "numeric",
   });
+}
+
+/**
+ * Calculează data calendaristică (DD.MM.YYYY) la care expiră cooldown-ul pentru un test,
+ * pornind de la data curentă în fusul orar al departamentului (Europe/Bucharest).
+ * Adăugarea se face la nivel de zile calendaristice, evitând decalajul generat
+ * de serverele care rulează în UTC (de ex. pe Vercel, unde între 00:00 și 02:00/03:00 ora
+ * României, serverul se află încă în ziua precedentă).
+ */
+export function calculeazaDataCooldown(cdZile: number, acum: number = Date.now()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ_DEPARTAMENT,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(new Date(acum));
+
+  const ziCurenta = Number(parts.find((p) => p.type === "day")?.value);
+  const lunaCurenta = Number(parts.find((p) => p.type === "month")?.value);
+  const anCurent = Number(parts.find((p) => p.type === "year")?.value);
+
+  const d = new Date(Date.UTC(anCurent, lunaCurenta - 1, ziCurenta + cdZile));
+  const zi = String(d.getUTCDate()).padStart(2, "0");
+  const luna = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const an = d.getUTCFullYear();
+  return `${zi}.${luna}.${an}`;
 }
 
 /**

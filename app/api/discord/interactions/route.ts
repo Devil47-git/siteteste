@@ -70,6 +70,10 @@ export async function POST(req: Request) {
   if (actiune === "trimite") {
     const cod = rec.cod;
     if (!cod) return ephemeral("Codul nu mai este disponibil. Candidatul să ceară din nou.");
+    const ttlSecunde = Math.floor((rec.exp - Date.now()) / 1000);
+    if (ttlSecunde <= 0) {
+      return ephemeral("Codul a expirat. Candidatul să ceară din nou.");
+    }
     try {
       await dmMessage(
         rec.u,
@@ -79,7 +83,7 @@ export async function POST(req: Request) {
           `Expiră: <t:${Math.floor(rec.exp / 1000)}:R>`,
       );
       rec.livrat = true;
-      await setJson(K.cod(hash), rec, Math.max(60, Math.floor((rec.exp - Date.now()) / 1000)));
+      await setJson(K.cod(hash), rec, ttlSecunde);
     } catch (e) {
       console.error("DM failed", e);
       return ephemeral(
@@ -92,10 +96,7 @@ export async function POST(req: Request) {
         hr.channel,
         hr.message,
         `✅ Cod trimis în privat lui <@${rec.u}> pentru **${t.nume}**.`,
-        container([
-          button(`cod:trimite:${hash}`, "Trimite codul în privat", 2, true),
-          button(`cod:refuza:${hash}`, "Refuză", 4, true),
-        ]),
+        buildResolvedButtons(hash),
       ).catch(() => {});
     }
     return NextResponse.json({
@@ -110,16 +111,20 @@ export async function POST(req: Request) {
         hr.channel,
         hr.message,
         `⛔ Cerere refuzată de <@${id}>.`,
-        container([
-          button(`cod:trimite:${hash}`, "Trimite codul în privat", 2, true),
-          button(`cod:refuza:${hash}`, "Refuză", 4, true),
-        ]),
+        buildResolvedButtons(hash),
       ).catch(() => {});
     }
     return ephemeral("Cerere refuzată.");
   }
 
   return ephemeral("Acțiune nevalidă.");
+}
+
+function buildResolvedButtons(hash: string) {
+  return container([
+    button(`cod:trimite:${hash}`, "Trimite codul în privat", 2, true),
+    button(`cod:refuza:${hash}`, "Refuză", 4, true),
+  ]);
 }
 
 function ephemeral(content: string) {

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { TestConfig } from "./types";
+import { sanitizeCodeInput } from "@/lib/format";
 
 export default function CodForm({ test }: { test: TestConfig }) {
   const router = useRouter();
@@ -13,12 +14,7 @@ export default function CodForm({ test }: { test: TestConfig }) {
   const [cerut, setCerut] = useState(false);
 
   function handleCodChange(val: string) {
-    // Curatam caractere nedorite (backticks de la Discord, spatii, ghilimele)
-    const curatat = val
-      .toUpperCase()
-      .replace(/[\u200B-\u200D\uFEFF]/g, "")
-      .replace(/[`"'“”‘’\s]/g, "")
-      .replace(/[^A-Z0-9]/g, "");
+    const curatat = sanitizeCodeInput(val);
 
     // Pastram maxim 8 caractere alfanumerice si adaugam cratima automat
     const doarCaractere = curatat.slice(0, 8);

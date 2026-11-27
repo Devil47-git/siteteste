@@ -3,8 +3,28 @@ import { getUser } from "@/lib/auth";
 import { getTest } from "@/lib/config";
 import { isFormatValid, hashCode, COD_TTL_SEC } from "@/lib/cod";
 import { getJson, setJson, store, K } from "@/lib/store";
+import type { StoredCode } from "@/app/api/discord/interactions/route";
 
 export const dynamic = "force-dynamic";
+
+export interface AttemptRecord {
+  id: string;
+  userId: string;
+  userSnapshot: {
+    id: string;
+    username: string;
+    globalName: string;
+    avatar: string | null;
+    membru: unknown;
+  };
+  testId: string;
+  inceput: number;
+  expira: number;
+  greseli: number;
+  index: number;
+  raspunsuri: unknown[];
+  finalizat: boolean;
+}
 
 /** Candidatul introduce codul primit in privat. */
 export async function POST(req: Request) {
@@ -24,7 +44,7 @@ export async function POST(req: Request) {
   }
 
   const hash = hashCode(rawCod);
-  const rec = await getJson<any>(K.cod(hash));
+  const rec = await getJson<StoredCode & { attemptId?: string }>(K.cod(hash));
 
   if (!rec) {
     return NextResponse.json(
@@ -48,7 +68,7 @@ export async function POST(req: Request) {
   if (rec.folosit) {
     // Daca utilizatorul are deja o tentativa activa generata cu acest cod, il redirectionam in test
     if (rec.attemptId) {
-      const existing = await getJson<any>(K.attempt(rec.attemptId));
+      const existing = await getJson<AttemptRecord>(K.attempt(rec.attemptId));
       if (existing && !existing.finalizat && Date.now() < existing.expira) {
         return NextResponse.json({
           ok: true,

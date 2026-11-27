@@ -189,7 +189,9 @@ function dataDinText(segment: string): number | null {
   if (!m[3]) {
     // Fără an: dacă data ar fi trecută de mai mult de 30 de zile, e anul următor.
     const candidat = inceputDeZiInDepartament(zi, luna, an);
-    if (candidat < acum.getTime() - 30 * 86400000) an += 1;
+    if (!isNaN(candidat) && candidat < acum.getTime() - 30 * 86400000) {
+      an += 1;
+    }
   }
   const d = inceputDeZiInDepartament(zi, luna, an);
   return isNaN(d) ? null : d;
@@ -251,39 +253,23 @@ let cacheMembri: { timestamp: number; data: Map<string, MembruMedical> } | null 
 const CACHE_TTL_MS = 60 * 1000; // 1 minut cache
 
 function calculeazaPermisiuniTeste(callsignNum: number) {
-  let poateSMULS = true;
-  let poateRezidentiat = true;
-  let poateBLS = true;
-  let poateRadio = true;
+  const poateBLS = true;
+  const poateRadio = true;
 
   if (callsignNum >= 600 && callsignNum < 700) {
-    poateBLS = true;
-    poateRadio = true;
-    poateSMULS = false;
-    poateRezidentiat = false;
-  } else if (callsignNum >= 400 && callsignNum < 500) {
-    poateBLS = true;
-    poateRadio = true;
-    poateSMULS = true;
-    poateRezidentiat = false;
-  } else if (callsignNum >= 500 && callsignNum < 600) {
-    // Cazul 500 (asimilabil 600/400, permisiune standard fara rezidentiat)
-    poateBLS = true;
-    poateRadio = true;
-    poateSMULS = true;
-    poateRezidentiat = false;
-  } else {
-    // 300+, 200+, 100+, conducere: orice test
-    poateBLS = true;
-    poateRadio = true;
-    poateSMULS = true;
-    poateRezidentiat = true;
+    return { poateSMULS: false, poateRezidentiat: false, poateBLS, poateRadio };
+  }
+  if (callsignNum >= 400 && callsignNum < 600) {
+    return { poateSMULS: true, poateRezidentiat: false, poateBLS, poateRadio };
   }
 
-  return { poateSMULS, poateRezidentiat, poateBLS, poateRadio };
+  // < 400 or >= 700 (standard tiers 300+, 200+, 100+, conducere)
+  return { poateSMULS: true, poateRezidentiat: true, poateBLS, poateRadio };
 }
 
-function parseazaRandMembru(c: any[]): { discordId: string; membru: MembruMedical } | null {
+export type SheetCell = { v?: unknown; f?: string } | null;
+
+function parseazaRandMembru(c: readonly SheetCell[]): { discordId: string; membru: MembruMedical } | null {
   // c[2] = NR. INSIGNA (Callsign) (Coloana C)
   // c[3] = NUME (Coloana D)
   // c[4] = RANK / Grad (Coloana E)

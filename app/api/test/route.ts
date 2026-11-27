@@ -3,47 +3,12 @@ import { getUser } from "@/lib/auth";
 import { getTest } from "@/lib/config";
 import { getJson, setJson, K } from "@/lib/store";
 import { ordineIntrebari, variantaCorecta, pozitieLaOriginal, optiuniAmestecate, intrebariPentru } from "@/lib/intrebari";
-import { trimiteRaport } from "@/lib/raport";
+import { finalizeazaAttempt } from "@/lib/tentativa";
 
 export const dynamic = "force-dynamic";
 
-/** Marcheaza tentativa ca finalizata si trimite raportul pe Discord (o singura data). */
 async function finalizeaza(a: any, motiv: string, t: any, picatFortat = false) {
-  if (!t) return a;
-  if (!a.finalizat) {
-    a.finalizat = true;
-    a.motiv = motiv;
-  }
-  const total = intrebariPentru(a.testId).length;
-  a.ultimaActiune = a.ultimaActiune ?? Date.now();
-  const corecte = (a.raspunsuri ?? []).filter((r: any) => r.corect).length;
-  a.corecte = corecte;
-  a.total = total;
-  // Motivele care inseamna automat RESPINS: prea multe greseli, timp expirat
-  // sau anticheat. La "final" (toate intrebarile raspunse) se decide doar dupa greseli.
-  const picatFortatDeMotiv = motiv === "greseli" || motiv === "timp" || motiv === "anticheat";
-  const picat = picatFortat || picatFortatDeMotiv || a.greseli > t.greseliPermise;
-  a.admis = !picat;
-  a.scor = picat ? 0 : Math.max(0, total - a.greseli);
-  // Intrebarea la care s-a picat (1-based). Daca nu s-a picat, se considera ultima intrebare.
-  a.picatLa = picat ? Math.min(total, Math.max(1, (a.raspunsuri?.length ?? 0) + (motiv === "greseli" ? 0 : 1))) : total;
-  await setJson(K.attempt(a.id), a, 3600);
-
-  if (!a.raportTrimis) {
-    try {
-      const u = (await getUser()) ?? a.userSnapshot;
-      if (u) {
-        const trimis = await trimiteRaport(u, a, a.motiv);
-        if (trimis) {
-          a.raportTrimis = true;
-          await setJson(K.attempt(a.id), a, 3600);
-        }
-      }
-    } catch (err) {
-      console.error("[finalizeaza] Eroare la trimiterea raportului:", err);
-    }
-  }
-  return a;
+  return finalizeazaAttempt(a, motiv, t, picatFortat);
 }
 
 async function load(attemptId: string | null, userId: string) {

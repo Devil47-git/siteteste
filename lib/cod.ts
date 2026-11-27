@@ -18,12 +18,10 @@ export type CodRecord = {
   livrat?: boolean;
 };
 
+import { sanitizeCodeInput } from "./format";
+
 export function normalize(cod: string) {
-  return cod
-    .toUpperCase()
-    .replace(/[\u200B-\u200D\uFEFF]/g, "") // elimina zero-width spaces
-    .replace(/[`"'“”‘’\s]/g, "") // elimina backticks, ghilimele si spatii
-    .replace(/[^A-Z0-9]/g, ""); // pastreaza doar litere si cifre
+  return sanitizeCodeInput(cod);
 }
 
 export function hashCode(cod: string) {

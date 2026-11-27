@@ -6,6 +6,7 @@ import { TESTS, GHID_URL, GHID_SECTIUNI, linkGhid } from "@/lib/config";
 import { getJson, K } from "@/lib/store";
 import { gasesteMembruDupaDiscordId, areAccesLaTest, ZILE_CD, formatDataRo } from "@/lib/sheets";
 import Regulament from "./Regulament";
+import { finalizeazaAttempt } from "@/lib/tentativa";
 
 export const dynamic = "force-dynamic";
 
@@ -135,8 +136,22 @@ export default async function Home() {
           cdMs,
         };
       }
-      if (Date.now() < att.expira) return { id: t.id, stare: "in_curs" as const, attemptId: a.attemptId, cdMs };
-      return { id: t.id, stare: "nou" as const, cdMs };
+      if (Date.now() < att.expira) {
+        return { id: t.id, stare: "in_curs" as const, attemptId: a.attemptId, cdMs };
+      }
+
+      // Tentativa a depășit timpul alocat în timp ce candidatul nu era activ pe pagină:
+      // o finalizăm automat cu motiv "timp" și trimitem raportul pe Discord
+      const actualizat = await finalizeazaAttempt(att, "timp", t);
+      return {
+        id: t.id,
+        stare: "gata" as const,
+        admis: actualizat.admis ?? false,
+        corecte: actualizat.corecte ?? 0,
+        picatLa: actualizat.picatLa ?? null,
+        total: actualizat.total ?? null,
+        cdMs,
+      };
     }),
   );
 

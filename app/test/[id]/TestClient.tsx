@@ -133,36 +133,46 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
     async (motiv = "timp") => {
       if (trimisRef.current) return;
       trimisRef.current = true;
-      try {
-        const r = await fetch("/api/test", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ a, timeout: true }),
-        });
-        const j = await r.json().catch(() => null);
-        if (j?.ok && (j.terminat || j.finalizat)) {
-          setFinalizat({
-            scor: j.scor ?? 0,
-            corecte: j.corecte ?? 0,
-            greseli: j.greseli ?? greseli,
-            total: j.total ?? q?.total,
-            motiv: j.motiv ?? motiv,
-            admis: j.admis ?? false,
-            picatLa: j.picatLa,
+
+      // Reîncercăm cererea către server pentru a asigura sincronizarea chiar și pe conexiuni cu latență mare / pierdere de pachete
+      let reusit = false;
+      for (let incercare = 0; incercare < 3; incercare++) {
+        try {
+          const r = await fetch("/api/test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ a, timeout: true }),
           });
-          return;
+          const j = await r.json().catch(() => null);
+          if (j?.ok && (j.terminat || j.finalizat)) {
+            reusit = true;
+            setFinalizat({
+              scor: j.scor ?? 0,
+              corecte: j.corecte ?? 0,
+              greseli: j.greseli ?? greseli,
+              total: j.total ?? q?.total,
+              motiv: j.motiv ?? motiv,
+              admis: j.admis ?? false,
+              picatLa: j.picatLa,
+            });
+            break;
+          }
+        } catch {
+          // Reîncercare scurtă după 600ms
+          await new Promise((resolve) => setTimeout(resolve, 600));
         }
-      } catch {
-        // serverul nu raspunde: continuam cu fallback local ca sa nu blocam ecranul
       }
-      setFinalizat({
-        scor: 0,
-        corecte: 0,
-        greseli,
-        total: q?.total,
-        motiv,
-        admis: false,
-      });
+
+      if (!reusit) {
+        setFinalizat({
+          scor: 0,
+          corecte: 0,
+          greseli,
+          total: q?.total,
+          motiv,
+          admis: false,
+        });
+      }
     },
     [a, greseli, q?.total],
   );
@@ -292,6 +302,25 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
     };
   }, [q, finalizat, a, greseli]);
 
+  const reincarcaUrmatoareaIntrebare = useCallback(async () => {
+    const s = await fetch(`/api/test?a=${a}`, { cache: "no-store" });
+    const k = await s.json().catch(() => null);
+    if (k?.ok && !k.finalizat) {
+      setQ(toQ(k));
+      setRamase(k.ramase);
+    } else if (k?.ok && k.finalizat) {
+      setFinalizat({
+        scor: k.scor,
+        corecte: k.corecte,
+        greseli: k.greseli,
+        total: k.total,
+        motiv: k.motiv,
+        admis: k.admis,
+        picatLa: k.picatLa,
+      });
+    }
+  }, [a]);
+
   async function confirma() {
     if (ales === null || busy || trimisRef.current) return;
     setBusy(true);
@@ -331,23 +360,7 @@ export default function TestClient({ attemptId, numeTest, greseliPermise }: Prop
         setQ(toQ(j.urmatoareaIntrebare));
         if (typeof j.ramase === "number") setRamase(j.ramase);
       } else {
-        // Fallback: reincarca intrebarea urmatoare
-        const s = await fetch(`/api/test?a=${a}`, { cache: "no-store" });
-        const k = await s.json().catch(() => null);
-        if (k?.ok && !k.finalizat) {
-          setQ(toQ(k));
-          setRamase(k.ramase);
-        } else if (k?.ok && k.finalizat) {
-          setFinalizat({
-            scor: k.scor,
-            corecte: k.corecte,
-            greseli: k.greseli,
-            total: k.total,
-            motiv: k.motiv,
-            admis: k.admis,
-            picatLa: k.picatLa,
-          });
-        }
+        await reincarcaUrmatoareaIntrebare();
       }
     } catch {
       setEroareSalvare("Conexiunea a fost întreruptă. Apasă din nou pe 'Confirmă răspunsul'.");
